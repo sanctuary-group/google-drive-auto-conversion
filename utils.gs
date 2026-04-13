@@ -70,6 +70,18 @@ function markAsProcessed(fileId) {
 }
 
 /**
+ * 抽出テキストが使える状態か判定
+ * デジタルPDFの埋め込みテキスト抽出が成功したかを判定するために使用
+ * @param {string} text
+ * @return {boolean}
+ */
+function hasUsableText(text) {
+  if (!text) return false;
+  var visible = text.replace(/\s/g, '');
+  return visible.length >= 50;
+}
+
+/**
  * 全角英数字・記号を半角に変換
  * @param {string} text - 変換対象テキスト
  * @return {string} 半角変換後のテキスト

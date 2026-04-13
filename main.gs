@@ -50,7 +50,7 @@ function processSingleFile(file) {
   }
 
   if (route === 'ocr') {
-    handleOcrRoute(fileId, fileName);
+    handleOcrRoute(fileId, fileName, mimeType);
   } else if (route === 'toSheet') {
     handleDirectSheetRoute(fileId, fileName);
   } else if (route === 'toDoc') {
@@ -63,15 +63,35 @@ function processSingleFile(file) {
 }
 
 /**
- * OCR経路: PDF/画像 → OCR → 内容判定 → Sheet or Doc
+ * OCR経路: PDF/画像 → テキスト抽出 → 内容判定 → Sheet or Doc
+ * PDFはまず埋め込みテキスト抽出を試み、失敗時にOCRへフォールバック
  * @param {string} fileId
  * @param {string} fileName
+ * @param {string} mimeType
  */
-function handleOcrRoute(fileId, fileName) {
-  var ocrDocId = convertWithOcr(fileId);
-  var text = extractTextFromDoc(ocrDocId);
-  var contentType = detectContentType(text);
+function handleOcrRoute(fileId, fileName, mimeType) {
+  var isPdf = (mimeType === 'application/pdf');
+  var ocrDocId;
+  var text;
 
+  if (isPdf) {
+    ocrDocId = convertWithoutOcr(fileId);
+    text = extractTextFromDoc(ocrDocId);
+
+    if (!hasUsableText(text)) {
+      console.log('埋め込みテキスト不足、OCRにフォールバック: ' + fileName);
+      deleteTemporaryDoc(ocrDocId);
+      ocrDocId = convertWithOcr(fileId);
+      text = extractTextFromDoc(ocrDocId);
+    } else {
+      console.log('埋め込みテキスト使用: ' + fileName + ' (' + text.length + ' chars)');
+    }
+  } else {
+    ocrDocId = convertWithOcr(fileId);
+    text = extractTextFromDoc(ocrDocId);
+  }
+
+  var contentType = detectContentType(text);
   console.log('内容判定: ' + fileName + ' → ' + contentType);
 
   if (contentType === 'invoice') {
@@ -176,6 +196,50 @@ function removeTrigger() {
   }
 }
 
+// ===== 診断 =====
+
+/**
+ * 設定とフォルダ内容を確認するデバッグ関数
+ */
+function diagnose() {
+  console.log('===== 診断開始 =====');
+  console.log('CFG.folders.upload: "' + CFG.folders.upload + '"');
+  console.log('CFG.folders.processed: "' + CFG.folders.processed + '"');
+  console.log('CFG.folders.output: "' + CFG.folders.output + '"');
+
+  if (!CFG.folders.upload) {
+    console.error('upload フォルダIDが空です');
+    return;
+  }
+
+  try {
+    var folder = DriveApp.getFolderById(CFG.folders.upload);
+    console.log('uploadフォルダ名: ' + folder.getName());
+    console.log('uploadフォルダURL: ' + folder.getUrl());
+
+    var files = folder.getFiles();
+    var count = 0;
+    while (files.hasNext()) {
+      var f = files.next();
+      count++;
+      var processed = isProcessed(f);
+      var route = getConversionRoute(f.getMimeType());
+      console.log('  - ' + f.getName() +
+                  ' | mimeType: ' + f.getMimeType() +
+                  ' | processed: ' + processed +
+                  ' | route: ' + route);
+    }
+    console.log('合計ファイル数: ' + count);
+
+    var unprocessed = getUnprocessedFiles(CFG.folders.upload);
+    console.log('未処理かつ対応形式: ' + unprocessed.length + ' 件');
+  } catch (e) {
+    console.error('uploadフォルダにアクセスできません: ' + e.message);
+  }
+
+  console.log('===== 診断終了 =====');
+}
+
 // ===== セットアップ支援 =====
 
 /**
@@ -184,7 +248,7 @@ function removeTrigger() {
  */
 function createFolderStructure() {
   var root = DriveApp.getRootFolder();
-  var parentFolder = root.createFolder('PDF自動変換');
+  var parentFolder = root.createFolder('Googleドライブ自動変換');
 
   var uploadFolder = parentFolder.createFolder('UPLOAD');
   var processedFolder = parentFolder.createFolder('処理済み');
@@ -197,5 +261,5 @@ function createFolderStructure() {
   console.log('processed: ' + processedFolder.getId());
   console.log('output:    ' + outputFolder.getId());
   console.log('');
-  console.log('親フォルダ「PDF自動変換」: ' + parentFolder.getUrl());
+  console.log('親フォルダ「Googleドライブ自動変換」: ' + parentFolder.getUrl());
 }

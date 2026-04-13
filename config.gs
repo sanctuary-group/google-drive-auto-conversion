@@ -6,9 +6,9 @@
 const CFG = {
   // フォルダID設定（Google DriveのフォルダIDを設定してください）
   folders: {
-    upload: '',          // 統合アップロードフォルダID
-    processed: '',       // 処理済み移動先フォルダID
-    output: '',          // 変換結果の出力先フォルダID
+    upload: '1lzldvYjzkZ2nCDYyd_bt3Z1Xzry96Xpt',          // 統合アップロードフォルダID
+    processed: '1Vx_his9zWZr-Wv8B2cM2_GbMtuume47w',       // 処理済み移動先フォルダID
+    output: '1xvKWeDFKi7HgMjs5uI0oLxy8buEfVaBn',          // 変換結果の出力先フォルダID
   },
 
   // OCR設定
@@ -33,7 +33,7 @@ const CFG = {
     recipientEmail: '',       // 空の場合は Session.getActiveUser().getEmail() を使用
     notifyOnSuccess: true,
     notifyOnError: true,
-    subjectPrefix: '[PDF自動変換] ',
+    subjectPrefix: '[Googleドライブ自動変換] ',
   },
 
   // 対応MIMEタイプと振り分け先

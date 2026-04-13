@@ -165,7 +165,12 @@ function extractItems(normalized, original) {
     }
   }
 
-  if (headerIndex === -1) return items;
+  // ヘッダー行が見つからない場合は別レイアウト用のパーサにフォールバック
+  if (headerIndex === -1) {
+    var cellPerLine = extractItemsCellPerLine(normalized);
+    if (cellPerLine.length > 0) return cellPerLine;
+    return extractItemsColumnMajor(normalized);
+  }
 
   // ヘッダー以降の行をパース
   // 数量・単価・金額パターン: テキスト + 数値 + 数値 + 数値
@@ -204,6 +209,171 @@ function extractItems(normalized, original) {
         });
       }
     }
+  }
+
+  // 行レイアウトで取れなかった場合は他のレイアウトでフォールバック
+  if (items.length === 0) {
+    var cellPerLine = extractItemsCellPerLine(normalized);
+    if (cellPerLine.length > 0) return cellPerLine;
+    return extractItemsColumnMajor(normalized);
+  }
+
+  return items;
+}
+
+/**
+ * 1セル1行レイアウトから明細を抽出
+ * デジタルPDFで「品目→数量→単価→金額」が縦に並び、続いて各行の値も縦に並ぶケース
+ * @param {string} normalized - 半角変換済みテキスト
+ * @return {Object[]}
+ */
+function extractItemsCellPerLine(normalized) {
+  // 全角スペース・タブ・改行などを含めて空白を除去するヘルパー
+  function strip(s) {
+    return (s || '').replace(/[\s\u3000\u00a0]+/g, '');
+  }
+
+  var lines = normalized.split('\n')
+    .map(function(l) { return l.replace(/\s+$/, '').replace(/^\s+/, ''); })
+    .filter(function(l) { return l.length > 0; });
+
+  // 品目ヘッダーを含む行を探す（短い行のみ＝ヘッダー単独行を想定）
+  var nameHeaderIdx = -1;
+  for (var i = 0; i < lines.length; i++) {
+    var clean = strip(lines[i]);
+    if (clean.length > 8) continue;  // 長い行はヘッダーではない
+    if (clean === '品名' || clean === '品目' || clean === '品番' ||
+        clean === '品番・品名' || clean === '内容' || clean === '摘要') {
+      nameHeaderIdx = i;
+      break;
+    }
+  }
+  if (nameHeaderIdx === -1) {
+    console.log('[cellPerLine] 品名ヘッダーが見つかりません');
+    return [];
+  }
+
+  // 品目ヘッダー以降の近傍5行以内に 数量/単価/金額 ヘッダーを探す
+  var qtyIdx = -1, unitIdx = -1, amountIdx = -1;
+  var searchEnd = Math.min(lines.length, nameHeaderIdx + 6);
+  for (var j = nameHeaderIdx + 1; j < searchEnd; j++) {
+    var c = strip(lines[j]);
+    if (c.length > 6) continue;
+    if (c === '数量' && qtyIdx === -1) qtyIdx = j;
+    else if (c === '単価' && unitIdx === -1) unitIdx = j;
+    else if (c === '金額' && amountIdx === -1) amountIdx = j;
+  }
+
+  console.log('[cellPerLine] ヘッダー位置: 品名=' + nameHeaderIdx +
+              ' 数量=' + qtyIdx + ' 単価=' + unitIdx + ' 金額=' + amountIdx);
+
+  if (qtyIdx === -1 || unitIdx === -1 || amountIdx === -1) {
+    console.log('[cellPerLine] 列ヘッダーが揃わないため終了');
+    return [];
+  }
+
+  // 値の開始位置 = 一番後ろのヘッダーの次の行
+  var startIdx = Math.max(nameHeaderIdx, qtyIdx, unitIdx, amountIdx) + 1;
+
+  // 4行ずつ1明細として読む
+  var items = [];
+  var idx = startIdx;
+  while (idx + 3 < lines.length) {
+    var name = lines[idx];
+    var qty = lines[idx + 1];
+    var unit = lines[idx + 2];
+    var amount = lines[idx + 3];
+
+    // 合計部に到達したら終了
+    if (/^(小計|合計|消費税|税込|税抜|総額|請求|お振込|お支払)/.test(strip(name))) break;
+
+    // ハイフンだけの空行はスキップ
+    if (name === '-' || name === '−' || name === '–' || name === 'ー') {
+      idx += 4;
+      continue;
+    }
+
+    var amountNum = parseNumber(amount);
+    var qtyNum = parseNumber(qty);
+
+    if (name && (amountNum > 0 || qtyNum > 0)) {
+      items.push({
+        name: name,
+        quantity: qtyNum,
+        unitPrice: parseNumber(unit),
+        amount: amountNum,
+      });
+    }
+
+    idx += 4;
+  }
+
+  console.log('[cellPerLine] 抽出件数: ' + items.length);
+  return items;
+}
+
+/**
+ * 列レイアウトのOCR結果から明細を抽出
+ * （OCRが表を列方向に読み取った場合に対応）
+ * @param {string} normalized - 半角変換済みテキスト
+ * @return {Object[]}
+ */
+function extractItemsColumnMajor(normalized) {
+  var lines = normalized.split('\n')
+    .map(function(l) { return l.trim(); })
+    .filter(function(l) { return l.length > 0; });
+
+  // 1. 品名ヘッダーを探す（金額・数量を含まない 品名/品目/品番 行）
+  var nameHeaderIdx = -1;
+  for (var i = 0; i < lines.length; i++) {
+    if (/品名|品目|品番/.test(lines[i]) && !/数量|単価|金額/.test(lines[i])) {
+      nameHeaderIdx = i;
+      break;
+    }
+  }
+  if (nameHeaderIdx === -1) return [];
+
+  // 2. 金額ヘッダーを探す（列ヘッダーの末尾を想定）
+  var amountHeaderIdx = -1;
+  for (var j = nameHeaderIdx + 1; j < lines.length; j++) {
+    if (/^金額$/.test(lines[j])) {
+      amountHeaderIdx = j;
+      break;
+    }
+  }
+  if (amountHeaderIdx === -1) return [];
+
+  // 3. 品名ヘッダーと金額ヘッダーの間にある行から品名を収集
+  //    （他の列ヘッダー・短いノイズ行はスキップ）
+  var names = [];
+  for (var k = nameHeaderIdx + 1; k < amountHeaderIdx; k++) {
+    var line = lines[k];
+    if (line.length <= 2) continue;                                  // ノイズ
+    if (/^(数量|単価|金額|備考|摘要|内容)$/.test(line)) continue;       // 他列ヘッダー
+    names.push(line);
+  }
+  if (names.length === 0) return [];
+
+  // 4. 金額ヘッダー以降から値を収集（小計・合計に達したら終了）
+  var values = [];
+  for (var m = amountHeaderIdx + 1; m < lines.length; m++) {
+    var l = lines[m];
+    if (/^(小計|小叶|合計|合叶|消費税|税込|税抜|総額|請求)/.test(l)) break;
+    if (l.length <= 1) continue;
+    values.push(l);
+  }
+
+  // 5. 値を3つずつ（数量・単価・金額）グループ化して品名と対応付け
+  var items = [];
+  for (var n = 0; n < names.length; n++) {
+    var idx = n * 3;
+    if (idx + 2 >= values.length) break;
+    items.push({
+      name: names[n],
+      quantity: parseNumber(values[idx]),
+      unitPrice: parseNumber(values[idx + 1]),
+      amount: parseNumber(values[idx + 2]),
+    });
   }
 
   return items;

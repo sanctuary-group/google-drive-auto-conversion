@@ -14,17 +14,39 @@ function convertWithOcr(fileId) {
   const baseName = sourceFile.getName().replace(/\.[^.]+$/, '');
 
   const resource = {
-    title: baseName + '_OCR',
+    name: baseName + '_OCR',
     mimeType: MimeType.GOOGLE_DOCS,
   };
 
+  // v3: 変換先がGoogle DocsならPDF/画像のOCRが自動で行われる
   const options = {
-    ocr: true,
     ocrLanguage: CFG.ocr.language,
   };
 
-  const convertedFile = Drive.Files.insert(resource, blob, options);
+  const convertedFile = Drive.Files.create(resource, blob, options);
   console.log('OCR変換完了: ' + sourceFile.getName() + ' → DocID: ' + convertedFile.id);
+
+  return convertedFile.id;
+}
+
+/**
+ * PDFをOCRなしでGoogle Documentに変換（埋め込みテキスト優先）
+ * デジタル生成PDFの場合は埋め込みテキストがそのまま使える
+ * @param {string} fileId - 元ファイルのDrive ID
+ * @return {string} 変換後のGoogle Document ID
+ */
+function convertWithoutOcr(fileId) {
+  const sourceFile = DriveApp.getFileById(fileId);
+  const blob = sourceFile.getBlob();
+  const baseName = sourceFile.getName().replace(/\.[^.]+$/, '');
+
+  const resource = {
+    name: baseName + '_TEXT',
+    mimeType: MimeType.GOOGLE_DOCS,
+  };
+
+  const convertedFile = Drive.Files.create(resource, blob);
+  console.log('テキスト変換完了: ' + sourceFile.getName() + ' → DocID: ' + convertedFile.id);
 
   return convertedFile.id;
 }
@@ -41,11 +63,11 @@ function convertOfficeFile(fileId, targetMimeType) {
   const baseName = sourceFile.getName().replace(/\.[^.]+$/, '');
 
   const resource = {
-    title: baseName,
+    name: baseName,
     mimeType: targetMimeType,
   };
 
-  const convertedFile = Drive.Files.insert(resource, blob);
+  const convertedFile = Drive.Files.create(resource, blob);
   console.log('直接変換完了: ' + sourceFile.getName() + ' → ID: ' + convertedFile.id);
 
   return convertedFile.id;
