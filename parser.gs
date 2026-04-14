@@ -64,20 +64,81 @@ function parseLedgerEntry(text, fileName, fileLink) {
 }
 
 function parseInvoice(text) {
-  // 全角→半角変換済みテキストを用意
-  const normalized = normalizeFullWidth(text);
+  // 2戦略を試行し、品質スコアが最高の結果を採用
+  //   戦略A: 正規化なし(既存互換)
+  //   戦略B: normalizeOcrText適用(全角区切り→改行、スペース縮約)
+  // 注: 全改行を空白化する "flat" 戦略は extractAmount が行末まで数値を拾ってしまい
+  //     口座番号等を誤検出するため採用しない。単一行レイアウトは extractItemsInline が対応する。
+  var variants = [
+    { name: 'raw',        text: text },
+    { name: 'normalized', text: normalizeOcrText(text) },
+  ];
 
-  return {
-    invoiceNumber: extractInvoiceNumber(normalized, text),
-    issueDate: extractDate(normalized, text),
-    vendorName: extractVendorName(text),
-    recipientName: extractRecipientName(text),
-    items: extractItems(normalized, text),
-    subtotal: extractAmount(normalized, '小計'),
-    taxAmount: extractAmount(normalized, '消費税'),
+  var best = null;
+  var bestScore = -1;
+  for (var v = 0; v < variants.length; v++) {
+    var result = parseInvoiceOnce(variants[v].text, text);
+    var score = scoreParseResult(result);
+    console.log('[parseInvoice] 戦略=' + variants[v].name + ' score=' + score);
+    if (score > bestScore) {
+      bestScore = score;
+      best = result;
+    }
+  }
+
+  return best;
+}
+
+/**
+ * 1パス分のパーサー実行
+ * @param {string} normalized - 解析対象(正規化済み or 元テキスト)
+ * @param {string} original - 抽出元テキスト(rawText用)
+ */
+function parseInvoiceOnce(normalized, original) {
+  var multiRate = extractMultiTaxRateTotals(normalized);
+
+  var result = {
+    invoiceNumber: extractInvoiceNumber(normalized, original),
+    issueDate: extractDate(normalized, original),
+    vendorName: extractVendorName(normalized),
+    recipientName: extractRecipientName(normalized),
+    items: extractItems(normalized, original),
+    subtotal: multiRate.subtotal || extractAmount(normalized, '小計'),
+    taxAmount: multiRate.taxAmount || extractAmount(normalized, '消費税'),
     total: extractAmount(normalized, '合計'),
-    rawText: text,
+    paymentDueDate: extractPaymentDueDate(normalized),
+    registrationNumber: extractRegistrationNumber(normalized),
+    rawText: original,
   };
+
+  // 小計+消費税から合計を逆算補完
+  if (!result.total && result.subtotal && result.taxAmount) {
+    result.total = result.subtotal + result.taxAmount;
+  }
+  // 合計-消費税から小計を逆算補完
+  if (!result.subtotal && result.total && result.taxAmount) {
+    result.subtotal = result.total - result.taxAmount;
+  }
+
+  return result;
+}
+
+/**
+ * パース結果の品質スコアを計算(複数戦略の中から最良を選ぶため)
+ * @param {Object} r
+ * @return {number}
+ */
+function scoreParseResult(r) {
+  var score = 0;
+  if (r.vendorName) score += 2;
+  if (r.issueDate) score += 1;
+  if (r.total) score += 2;
+  if (r.subtotal) score += 1;
+  if (r.taxAmount) score += 1;
+  if (r.items && r.items.length > 0) score += 2;
+  if (r.paymentDueDate) score += 1;
+  if (r.invoiceNumber) score += 1;
+  return score;
 }
 
 /**
@@ -87,17 +148,61 @@ function parseInvoice(text) {
  * @return {string}
  */
 function extractInvoiceNumber(normalized, original) {
+  // 許容文字: 英数字 + - _ と、スラッシュで分割された続き(例: "2026 / 0103")
+  var core = '[A-Za-z0-9][A-Za-z0-9\\-_]*(?:\\s*\\/\\s*[A-Za-z0-9\\-_]+)?';
   var patterns = [
-    /請求番号[：:\s]*([A-Za-z0-9\-_]+)/,
-    /請求書番号[：:\s]*([A-Za-z0-9\-_]+)/,
-    /No\.\s*([A-Za-z0-9\-_]+)/,
-    /Invoice\s*#?\s*([A-Za-z0-9\-_]+)/i,
-    /伝票番号[：:\s]*([A-Za-z0-9\-_]+)/,
+    new RegExp('請求書番号[:：\\s]*(' + core + ')'),
+    new RegExp('請求番号[:：\\s]*(' + core + ')'),
+    new RegExp('注文書番号[:：\\s]*(' + core + ')'),
+    new RegExp('注文番号[:：\\s]*(' + core + ')'),
+    new RegExp('発注番号[:：\\s]*(' + core + ')'),
+    new RegExp('伝票番号[:：\\s]*(' + core + ')'),
+    new RegExp('契約番号[:：\\s]*(' + core + ')'),
+    // No. (末尾が単語境界: NOTE等の部分一致を避ける)
+    new RegExp('\\bNo\\.?(?![A-Za-z])\\s*(' + core + ')', 'i'),
+    new RegExp('\\bInvoice\\s*#?\\s*(' + core + ')', 'i'),
+    new RegExp('\\bPO\\s*Number[:：\\s]*(' + core + ')', 'i'),
   ];
 
   for (var i = 0; i < patterns.length; i++) {
-    var match = normalized.match(patterns[i]) || original.match(patterns[i]);
-    if (match) return match[1].trim();
+    var sourceText = normalized;
+    var match = sourceText.match(patterns[i]);
+    if (!match) {
+      sourceText = original;
+      match = sourceText.match(patterns[i]);
+    }
+    if (!match) {
+      // ラベルと番号が別行にあるケースの行ベース検索
+      var labelWords = ['請求書番号','請求番号','注文書番号','注文番号','発注番号','伝票番号','契約番号'];
+      var sourceLines = original.split('\n');
+      for (var lw = 0; lw < labelWords.length; lw++) {
+        var labelRe = buildSpacedLabelRegex(labelWords[lw]);
+        for (var ln = 0; ln < sourceLines.length; ln++) {
+          if (!labelRe.test(sourceLines[ln])) continue;
+          // 次の2行から英数字の番号を探す
+          for (var nxt = ln + 1; nxt <= Math.min(ln + 2, sourceLines.length - 1); nxt++) {
+            var numMatch = sourceLines[nxt].match(/^[\s　]*([A-Za-z0-9][A-Za-z0-9\-_]{2,30})(?:[\s　]|$)/);
+            if (numMatch) return numMatch[1];
+          }
+        }
+      }
+      continue;
+    }
+
+    var captured = match[1].replace(/\s+/g, '').trim();
+
+    // 「XXXX/2026」のように末尾がスラッシュ+4桁数字の場合、後続が日付かチェック
+    // (例: "No. PO-2026-0234 / 2026.04.14" の 2026 は年なのでスラッシュ以降を削除)
+    var tailMatch = captured.match(/^(.+?)\/(\d{4})$/);
+    if (tailMatch) {
+      var afterEndIdx = match.index + match[0].length;
+      var following = sourceText.substring(afterEndIdx, afterEndIdx + 10);
+      // 直後に .MM.DD / -MM-DD / 年 が続くなら年号部分を剥がす
+      if (/^[.\/-]\d{1,2}[.\/-]\d{1,2}/.test(following) || /^\s*年/.test(following)) {
+        captured = tailMatch[1];
+      }
+    }
+    return captured;
   }
 
   return '';
@@ -115,8 +220,8 @@ function extractDate(normalized, original) {
     /令和\s*(\d+)\s*年\s*(\d+)\s*月\s*(\d+)\s*日/,
     // 西暦: 2024年1月15日
     /(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日/,
-    // スラッシュ・ハイフン区切り: 2024/01/15, 2024-01-15
-    /(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/,
+    // スラッシュ・ハイフン・ドット区切り: 2024/01/15, 2024-01-15, 2024.01.15
+    /(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/,
   ];
 
   // 和暦パターン
@@ -132,7 +237,7 @@ function extractDate(normalized, original) {
     return dateMatch[1] + '/' + dateMatch[2] + '/' + dateMatch[3];
   }
 
-  // スラッシュ・ハイフン区切り
+  // スラッシュ・ハイフン・ドット区切り
   var slashMatch = normalized.match(patterns[2]) || original.match(patterns[2]);
   if (slashMatch) {
     return slashMatch[1] + '/' + slashMatch[2] + '/' + slashMatch[3];
@@ -164,20 +269,93 @@ function extractDate(normalized, original) {
 
 /**
  * 発行元（会社名）を抽出
+ *
+ * 宛先と混同しないよう、以下のアルゴリズムでスコアリング:
+ *   1. 宛先社名を候補から除外
+ *   2. 住所(〒)・電話・登録番号 近傍をプラススコア
+ *   3. 宛先位置より後ろをプラススコア
+ *   4. 最高スコアを返す
+ *
  * @param {string} text - 元テキスト
  * @return {string}
  */
 function extractVendorName(text) {
-  var patterns = [
-    /^(.+(?:株式会社|有限会社|合同会社|（株）|\(株\)))/m,
-    /^((?:株式会社|有限会社|合同会社).+)$/m,
-  ];
+  var recipient = extractRecipientName(text);
 
-  for (var i = 0; i < patterns.length; i++) {
-    var match = text.match(patterns[i]);
-    if (match) return match[1].trim();
+  // 社名候補を全列挙
+  var candidates = [];
+
+  // パターン1: "〇〇株式会社" / "〇〇有限会社" など(法人格が後ろ)
+  var candRe = /(?:^|[\s、。\n])([^\s、。\n]{1,40}?(?:株式会社|有限会社|合同会社|（株）|\(株\)|K\.K\.|G\.K\.|Inc\.|LLC|Corporation|Corp\.))/g;
+  var m;
+  while ((m = candRe.exec(text)) !== null) {
+    candidates.push({ name: m[1].trim(), index: m.index });
   }
 
+  // パターン2: "株式会社〇〇" など(法人格が先頭)
+  var preRe = /((?:株式会社|有限会社|合同会社)[^\s、。\n]{1,40})/g;
+  while ((m = preRe.exec(text)) !== null) {
+    candidates.push({ name: m[1].trim(), index: m.index });
+  }
+
+  // パターン3: 法人格を持たない屋号(ダミー製作所、サンプル工房、◯◯商店 など)
+  //   〒 郵便番号の直前にある非空行を社名候補とみなす(請求書では発行元の頭に配置されやすい)
+  var zipRe = /〒\s*\d{3}[-‐]?\d{4}/g;
+  while ((m = zipRe.exec(text)) !== null) {
+    // 〒の直前にある非空行を探す
+    var prefix = text.substring(Math.max(0, m.index - 200), m.index);
+    var prefixLines = prefix.split('\n').map(function(l) { return l.trim(); }).filter(function(l) { return l.length > 0; });
+    if (prefixLines.length > 0) {
+      var candidate = prefixLines[prefixLines.length - 1];
+      // 見出し語や日付などを除外
+      if (candidate.length >= 2 && candidate.length <= 40 &&
+          !/^(FROM|発行元|請求元|BILL|Issuer|住所|電話|TEL|FAX)/i.test(candidate) &&
+          !/^\d/.test(candidate) &&
+          candidate !== recipient) {
+        candidates.push({ name: candidate, index: m.index - candidate.length });
+      }
+    }
+  }
+
+  if (candidates.length === 0) return '';
+
+  // 宛先位置(スコア加点の基準)
+  var recipientIdx = recipient ? text.indexOf(recipient) : -1;
+
+  // スコアリング
+  var best = null;
+  var bestScore = -Infinity;
+  for (var i = 0; i < candidates.length; i++) {
+    var cand = candidates[i];
+    if (recipient && cand.name === recipient) continue;  // 宛先と同一は除外
+    if (recipient && cand.name.indexOf(recipient) !== -1) continue;
+
+    var score = 0;
+    // 近傍(前後100文字)を検査
+    var start = Math.max(0, cand.index - 50);
+    var end = Math.min(text.length, cand.index + cand.name.length + 150);
+    var context = text.substring(start, end);
+
+    if (/〒\s*\d{3}[-‐]?\d{4}/.test(context)) score += 5;
+    if (/TEL|電話|Tel|Phone|FAX|Fax/i.test(context)) score += 3;
+    if (/登録番号|T\d{13}/.test(context)) score += 10;
+    if (/発行元|請求元|Issuer|From|BILL\s*FROM/i.test(context)) score += 5;
+    if (recipientIdx !== -1 && cand.index > recipientIdx) score += 2;
+
+    if (score > bestScore) {
+      bestScore = score;
+      best = cand;
+    }
+  }
+
+  if (best) return best.name;
+
+  // スコアが付かなくても、宛先以外の最初の候補を返す
+  for (var j = 0; j < candidates.length; j++) {
+    if (!recipient || candidates[j].name !== recipient) {
+      return candidates[j].name;
+    }
+  }
   return '';
 }
 
@@ -187,15 +365,119 @@ function extractVendorName(text) {
  * @return {string}
  */
 function extractRecipientName(text) {
-  var patterns = [
-    /(.+?)\s*(?:御中|様|殿)/,
-  ];
+  // パターン1: 敬称直前の会社名/個人名 (御中|様|さま|殿)
+  var honorMatch = text.match(/([^\s、。\n]+?)\s*(?:御中|様|さま|殿)/);
+  if (honorMatch) return honorMatch[1].trim();
 
-  for (var i = 0; i < patterns.length; i++) {
-    var match = text.match(patterns[i]);
-    if (match) return match[1].trim();
+  // パターン2: 宛先ラベルの次の行(英日混在レイアウト)
+  var labels = ['宛先', '注文先', '請求先', '発注先', 'BILL TO', 'BILLTO', 'BUYER', 'TO'];
+  var lines = text.split('\n');
+  for (var li = 0; li < labels.length; li++) {
+    var labRe = buildSpacedLabelRegex(labels[li], 'i');
+    for (var i = 0; i < lines.length; i++) {
+      if (!labRe.test(lines[i])) continue;
+      // ラベル以降の同一行に名前があるか
+      var afterMatch = lines[i].match(labRe);
+      var rest = lines[i].substring(afterMatch.index + afterMatch[0].length).trim();
+      if (rest.length >= 2 && rest.length <= 40 && !/^[:：]/.test(rest)) {
+        return rest.replace(/^[:：\s]+/, '').trim();
+      }
+      // 同一行に名前がなければ次の非空行を返す
+      for (var j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+        var candidate = lines[j].trim();
+        if (candidate.length >= 2 && candidate.length <= 40) {
+          return candidate;
+        }
+      }
+    }
   }
 
+  return '';
+}
+
+/**
+ * 支払期限を抽出
+ * @param {string} text - 正規化済みテキスト
+ * @return {string} 日付文字列 (yyyy/MM/dd) または空
+ */
+function extractPaymentDueDate(text) {
+  var labels = [
+    '支払期日', '支払期限', 'お支払期日', 'お支払期限',
+    '支払日', 'お支払日', '振込期限', '振込期日',
+    '納期',
+    'Payment Due', 'Due Date', 'Pay By',
+  ];
+
+  var lines = text.split('\n');
+  for (var v = 0; v < labels.length; v++) {
+    var lab = labels[v];
+    var labRe = buildSpacedLabelRegex(lab, 'i');
+    for (var i = 0; i < lines.length; i++) {
+      var labMatch = lines[i].match(labRe);
+      if (!labMatch) continue;
+
+      // ラベル位置以降の同一行と次の行を結合して日付抽出
+      var target = lines[i].substring(labMatch.index + labMatch[0].length);
+      if (i + 1 < lines.length) target += ' ' + lines[i + 1];
+
+      var dateStr = extractDate(target, target);
+      if (dateStr) return dateStr;
+    }
+  }
+
+  return '';
+}
+
+/**
+ * 適格請求書の複数税率(8%/10%)内訳から小計・消費税の合計を算出
+ * 軽減税率が含まれない通常請求書では {0, 0} を返し、呼び出し元は通常の extractAmount を使う
+ * @param {string} text
+ * @return {{subtotal: number, taxAmount: number}}
+ */
+function extractMultiTaxRateTotals(text) {
+  // 「軽減税率」キーワードが無ければ適格請求書ではないと判定
+  if (text.indexOf('軽減税率') === -1) return { subtotal: 0, taxAmount: 0 };
+
+  var subtotal = 0;
+  var tax = 0;
+  var foundRates = 0;
+
+  var lines = text.split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    // 税率対象の行だけ検出(軽減税率という注釈単独は除外)
+    if (!/(8\s*%|10\s*%)\s*対象/.test(lines[i])) continue;
+
+    // 同一行で2つの数値が取れなければ、次の2行を結合して再取得
+    var nums = collectAmountCandidates(lines[i]);
+    if (nums.length < 2) {
+      var combined = lines[i];
+      if (i + 1 < lines.length) combined += ' ' + lines[i + 1];
+      if (i + 2 < lines.length) combined += ' ' + lines[i + 2];
+      nums = collectAmountCandidates(combined);
+    }
+    if (nums.length < 2) continue;
+
+    // 先頭2つが [対象金額, 消費税額]
+    subtotal += nums[0];
+    tax += nums[1];
+    foundRates++;
+  }
+
+  if (foundRates === 0) return { subtotal: 0, taxAmount: 0 };
+  return { subtotal: subtotal, taxAmount: tax };
+}
+
+/**
+ * 適格請求書(インボイス制度)の登録番号を抽出
+ * パターン: "登録番号 T1234567890123" または単独の "T" + 13桁
+ * @param {string} text
+ * @return {string}
+ */
+function extractRegistrationNumber(text) {
+  var m = text.match(/登録番号[：: 　]*T?\s*(\d{13})/);
+  if (m) return 'T' + m[1];
+  m = text.match(/\bT(\d{13})\b/);
+  if (m) return 'T' + m[1];
   return '';
 }
 
@@ -209,12 +491,13 @@ function extractItems(normalized, original) {
   var items = [];
   var lines = normalized.split('\n');
 
-  // 明細ヘッダー行を検出
+  // 明細ヘッダー行を検出（英語/平仮名レイアウトも対応）
+  var nameHeaderWords = ['品名', '品目', '内容', '摘要', 'Description', 'Item', 'なに'];
+  var dataHeaderWords = ['金額', '数量', '単価', 'Amount', 'Qty', 'Quantity', 'Price', 'きんがく', 'たんか', 'かず'];
   var headerIndex = -1;
   for (var i = 0; i < lines.length; i++) {
     var line = lines[i];
-    if ((line.indexOf('品名') !== -1 || line.indexOf('品目') !== -1 || line.indexOf('内容') !== -1 || line.indexOf('摘要') !== -1) &&
-        (line.indexOf('金額') !== -1 || line.indexOf('数量') !== -1)) {
+    if (containsAny(line, nameHeaderWords) && containsAny(line, dataHeaderWords)) {
       headerIndex = i;
       break;
     }
@@ -224,7 +507,9 @@ function extractItems(normalized, original) {
   if (headerIndex === -1) {
     var cellPerLine = extractItemsCellPerLine(normalized);
     if (cellPerLine.length > 0) return cellPerLine;
-    return extractItemsColumnMajor(normalized);
+    var colMajor = extractItemsColumnMajor(normalized);
+    if (colMajor.length > 0) return colMajor;
+    return extractItemsInline(normalized);
   }
 
   // ヘッダー以降の行をパース
@@ -268,9 +553,75 @@ function extractItems(normalized, original) {
 
   // 行レイアウトで取れなかった場合は他のレイアウトでフォールバック
   if (items.length === 0) {
-    var cellPerLine = extractItemsCellPerLine(normalized);
-    if (cellPerLine.length > 0) return cellPerLine;
-    return extractItemsColumnMajor(normalized);
+    var cellPerLine2 = extractItemsCellPerLine(normalized);
+    if (cellPerLine2.length > 0) return cellPerLine2;
+    var colMajor2 = extractItemsColumnMajor(normalized);
+    if (colMajor2.length > 0) return colMajor2;
+    return extractItemsInline(normalized);
+  }
+
+  return items;
+}
+
+/**
+ * 指定文字列にいずれかの単語が含まれるか判定
+ * @param {string} str
+ * @param {string[]} words
+ * @return {boolean}
+ */
+function containsAny(str, words) {
+  for (var i = 0; i < words.length; i++) {
+    if (str.indexOf(words[i]) !== -1) return true;
+  }
+  return false;
+}
+
+/**
+ * 単一行に全明細が詰まっているレイアウトから抽出
+ *
+ * 例: "Description Qty Unit Price Amount コンサル費用 10 時間 ¥15,000 ¥150,000 撮影・編集費 1 式 ¥180,000 ¥180,000 ..."
+ * 戦略:
+ *   1. ヘッダー語(品名/Description/なに等)と金額語(金額/Amount/きんがく等)の後から開始
+ *   2. 合計/Subtotal/Tax で終端
+ *   3. "名前 数量 (単位) ¥単価 ¥金額" の反復パターンを正規表現で抽出
+ *
+ * @param {string} normalized
+ * @return {Object[]}
+ */
+function extractItemsInline(normalized) {
+  // 改行を空白に変換して1本の文字列にする
+  var flat = normalized.replace(/\n/g, ' ');
+
+  // ヘッダー終端位置を特定
+  var headerEndRe = /(Description|Item|品名|品目|内容|摘要|なに)[^¥\n]{0,80}?(Amount|金額|きんがく)/i;
+  var headerMatch = flat.match(headerEndRe);
+  var startIdx = headerMatch ? (headerMatch.index + headerMatch[0].length) : 0;
+
+  // 終端境界を探す
+  var endRe = /(Subtotal|小計|税抜合計|Total|合計|Tax|消費税|Grand\s*Total|Amount\s*Due)/i;
+  var tail = flat.substring(startIdx);
+  var endMatch = tail.match(endRe);
+  var endIdx = endMatch ? (startIdx + endMatch.index) : flat.length;
+
+  var section = flat.substring(startIdx, endIdx);
+
+  // "品名 数量 (単位?) ¥単価 ¥金額" を反復抽出
+  var re = /([^¥\n]+?)\s+(\d+(?:\.\d+)?)\s*([^\s¥\d\n]{0,6})?\s*[¥￥]([\d,]+)\s*[¥￥]([\d,]+)/g;
+  var items = [];
+  var m;
+  while ((m = re.exec(section)) !== null) {
+    var name = m[1].trim();
+    // 先頭にヘッダー残骸があれば除去
+    name = name.replace(/^(Description|Qty|Quantity|Unit\s*Price|Amount|品名|品目|数量|単価|金額|なに|かず|たんい|たんか|きんがく)\s*/i, '').trim();
+    if (!name) continue;
+    var amountNum = parseNumber(m[5]);
+    if (amountNum <= 0) continue;
+    items.push({
+      name: name,
+      quantity: parseNumber(m[2]),
+      unitPrice: parseNumber(m[4]),
+      amount: amountNum,
+    });
   }
 
   return items;
@@ -278,12 +629,12 @@ function extractItems(normalized, original) {
 
 /**
  * 1セル1行レイアウトから明細を抽出
- * デジタルPDFで「品目→数量→単価→金額」が縦に並び、続いて各行の値も縦に並ぶケース
+ * 品名/数量/単位/単価/金額 が縦に並ぶケース(4〜6列の可変)
+ * 英語(Description/Qty/Unit/Price/Amount)・平仮名(なに/かず/たんい/たんか/きんがく)にも対応
  * @param {string} normalized - 半角変換済みテキスト
  * @return {Object[]}
  */
 function extractItemsCellPerLine(normalized) {
-  // 全角スペース・タブ・改行などを含めて空白を除去するヘルパー
   function strip(s) {
     return (s || '').replace(/[\s\u3000\u00a0]+/g, '');
   }
@@ -292,78 +643,90 @@ function extractItemsCellPerLine(normalized) {
     .map(function(l) { return l.replace(/\s+$/, '').replace(/^\s+/, ''); })
     .filter(function(l) { return l.length > 0; });
 
-  // 品目ヘッダーを含む行を探す（短い行のみ＝ヘッダー単独行を想定）
+  // ラベル語は小文字化して格納(大文字小文字を無視)
+  var nameHeaderWords = {'品名':1,'品目':1,'品番':1,'品番・品名':1,'内容':1,'摘要':1,'なに':1,'description':1,'item':1};
+  var qtyWords       = {'数量':1,'かず':1,'qty':1,'quantity':1};
+  var unitLabelWords = {'単位':1,'たんい':1,'unit':1};
+  var priceWords     = {'単価':1,'たんか':1,'unitprice':1,'price':1};
+  var amountWords    = {'金額':1,'きんがく':1,'amount':1};
+  var taxRateWords   = {'税率':1,'taxrate':1};
+  var noWords        = {'no':1,'no.':1,'#':1,'番号':1,'no,':1};
+
+  function keyOf(s) { return strip(s).toLowerCase(); }
+
+  // 名前ヘッダーを探す(単独行、10文字以下)
   var nameHeaderIdx = -1;
   for (var i = 0; i < lines.length; i++) {
     var clean = strip(lines[i]);
-    if (clean.length > 8) continue;  // 長い行はヘッダーではない
-    if (clean === '品名' || clean === '品目' || clean === '品番' ||
-        clean === '品番・品名' || clean === '内容' || clean === '摘要') {
+    if (clean.length > 12) continue;
+    if (nameHeaderWords[clean.toLowerCase()]) {
       nameHeaderIdx = i;
       break;
     }
   }
-  if (nameHeaderIdx === -1) {
-    console.log('[cellPerLine] 品名ヘッダーが見つかりません');
-    return [];
-  }
+  if (nameHeaderIdx === -1) return [];
 
-  // 品目ヘッダー以降の近傍5行以内に 数量/単価/金額 ヘッダーを探す
-  var qtyIdx = -1, unitIdx = -1, amountIdx = -1;
-  var searchEnd = Math.min(lines.length, nameHeaderIdx + 6);
+  // 名前ヘッダーの直前に "No" / "番号" 列があるか確認
+  var hasNoColumn = nameHeaderIdx > 0 && noWords[keyOf(lines[nameHeaderIdx - 1])];
+
+  // 名前ヘッダー以降の列ヘッダーを順に探索
+  var taxRateIdx = -1, qtyIdx = -1, unitLabelIdx = -1, priceIdx = -1, amountIdx = -1;
+  var searchEnd = Math.min(lines.length, nameHeaderIdx + 10);
   for (var j = nameHeaderIdx + 1; j < searchEnd; j++) {
-    var c = strip(lines[j]);
-    if (c.length > 6) continue;
-    if (c === '数量' && qtyIdx === -1) qtyIdx = j;
-    else if (c === '単価' && unitIdx === -1) unitIdx = j;
-    else if (c === '金額' && amountIdx === -1) amountIdx = j;
+    var c = keyOf(lines[j]);
+    if (c.length > 12) continue;
+    if (taxRateWords[c] && taxRateIdx === -1) taxRateIdx = j;
+    else if (qtyWords[c] && qtyIdx === -1) qtyIdx = j;
+    else if (unitLabelWords[c] && unitLabelIdx === -1) unitLabelIdx = j;
+    else if (priceWords[c] && priceIdx === -1) priceIdx = j;
+    else if (amountWords[c] && amountIdx === -1) amountIdx = j;
   }
 
-  console.log('[cellPerLine] ヘッダー位置: 品名=' + nameHeaderIdx +
-              ' 数量=' + qtyIdx + ' 単価=' + unitIdx + ' 金額=' + amountIdx);
+  if (qtyIdx === -1 || amountIdx === -1) return [];
 
-  if (qtyIdx === -1 || unitIdx === -1 || amountIdx === -1) {
-    console.log('[cellPerLine] 列ヘッダーが揃わないため終了');
-    return [];
-  }
+  // 列順: (No?) → 品名 → (税率?) → 数量 → (単位?) → (単価?) → 金額
+  var columnOrder = [];
+  if (hasNoColumn) columnOrder.push('no');
+  columnOrder.push('name');
+  if (taxRateIdx !== -1) columnOrder.push('taxRate');
+  columnOrder.push('qty');
+  if (unitLabelIdx !== -1) columnOrder.push('unit');
+  if (priceIdx !== -1) columnOrder.push('price');
+  columnOrder.push('amount');
+  var cols = columnOrder.length;
 
-  // 値の開始位置 = 一番後ろのヘッダーの次の行
-  var startIdx = Math.max(nameHeaderIdx, qtyIdx, unitIdx, amountIdx) + 1;
+  var startIdx = Math.max(nameHeaderIdx, taxRateIdx, qtyIdx, unitLabelIdx, priceIdx, amountIdx) + 1;
 
-  // 4行ずつ1明細として読む
   var items = [];
   var idx = startIdx;
-  while (idx + 3 < lines.length) {
-    var name = lines[idx];
-    var qty = lines[idx + 1];
-    var unit = lines[idx + 2];
-    var amount = lines[idx + 3];
+  while (idx + cols - 1 < lines.length) {
+    var record = {};
+    for (var k = 0; k < cols; k++) {
+      record[columnOrder[k]] = lines[idx + k];
+    }
 
-    // 合計部に到達したら終了
-    if (/^(小計|合計|消費税|税込|税抜|総額|請求|お振込|お支払)/.test(strip(name))) break;
+    // 合計部や空行に到達したら終了
+    var nameStripped = strip(record.name);
+    if (/^(小計|合計|消費税|税込|税抜|総額|総計|請求|お振込|お支払|区分|Subtotal|Total|Tax|GrandTotal)/i.test(nameStripped)) break;
 
     // ハイフンだけの空行はスキップ
-    if (name === '-' || name === '−' || name === '–' || name === 'ー') {
-      idx += 4;
+    if (nameStripped === '-' || nameStripped === '−' || nameStripped === '–' || nameStripped === 'ー') {
+      idx += cols;
       continue;
     }
 
-    var amountNum = parseNumber(amount);
-    var qtyNum = parseNumber(qty);
-
-    if (name && (amountNum > 0 || qtyNum > 0)) {
+    var amountNum = parseNumber(record.amount);
+    if (record.name && amountNum > 0) {
       items.push({
-        name: name,
-        quantity: qtyNum,
-        unitPrice: parseNumber(unit),
+        name: record.name,
+        quantity: parseNumber(record.qty || 0),
+        unitPrice: parseNumber(record.price || record.amount || 0),
         amount: amountNum,
       });
     }
-
-    idx += 4;
+    idx += cols;
   }
 
-  console.log('[cellPerLine] 抽出件数: ' + items.length);
   return items;
 }
 
@@ -436,60 +799,110 @@ function extractItemsColumnMajor(normalized) {
 
 /**
  * 指定ラベルの金額を抽出
- * 「10%」などの税率を金額と誤認しないよう、%が後続する数値は除外する。
- * @param {string} text - テキスト
- * @param {string} label - ラベル（小計、消費税、合計）
+ *
+ * 特徴:
+ * - 日本語/英語/装飾スペースすべてに対応(buildSpacedLabelRegex で吸収)
+ * - "10%" など税率を金額と誤認しないよう % 後続の数値は除外
+ * - 具体ラベル優先(Subtotal/Grand Total を Total より先に判定し、ヒット行は除外)
+ * - ラベル行に数値がなければ次の行も探索
+ * - 同一行に複数値があれば最大値を採用
+ *
+ * @param {string} text - 正規化済みテキスト(normalizeOcrText適用済み想定)
+ * @param {string} label - ラベル種別 '合計' | '小計' | '消費税'
  * @return {number}
  */
 function extractAmount(text, label) {
-  // ラベルバリエーション（より具体的な表記を先に試す）
-  var labelVariants;
-  if (label === '消費税') {
-    labelVariants = ['消費税額', '消費税等', '内消費税', '消費税'];
-  } else if (label === '小計') {
-    labelVariants = ['小計金額', '小計'];
-  } else if (label === '合計') {
-    labelVariants = ['ご請求金額', '請求金額', '合計金額', '総額', '合計'];
-  } else {
-    labelVariants = [label];
-  }
+  var labelVariants = getAmountLabelVariants(label);
 
-  // 行内の数値候補を抽出（%/％が後続するものは税率なので除外）
-  function collectAmounts(line) {
-    var amounts = [];
-    var re = /[¥￥]?\s*([\d,]+)(\s*[%％])?/g;
-    var m;
-    while ((m = re.exec(line)) !== null) {
-      if (m[2]) continue;  // %が後続 → 税率
-      var n = parseNumber(m[1]);
-      if (n > 0) amounts.push(n);
-    }
-    return amounts;
-  }
+  // より具体的なラベルでヒットした行番号を記録し、後続の汎用ラベルの対象外にする
+  // (例: "Subtotal" マッチ行を "Total" 検索時に無視することで Subtotal 誤ヒットを回避)
+  var excludedLines = {};
 
-  var lines = text.split('\n');
   for (var v = 0; v < labelVariants.length; v++) {
     var lab = labelVariants[v];
+    var labRe = buildSpacedLabelRegex(lab, 'i');
+    var lines = text.split('\n');
+
     for (var i = 0; i < lines.length; i++) {
-      if (lines[i].indexOf(lab) === -1) continue;
+      if (excludedLines[i]) continue;
+      var labMatch = lines[i].match(labRe);
+      if (!labMatch) continue;
 
-      // ラベル位置以降の同一行を対象に金額を探す
-      var afterLabel = lines[i].substring(lines[i].indexOf(lab) + lab.length);
-      var nums = collectAmounts(afterLabel);
+      // 前後が英数字なら部分文字列マッチ(例: "Total" が "Subtotal" の一部)としてスキップ
+      var charBefore = labMatch.index > 0 ? lines[i].charAt(labMatch.index - 1) : '';
+      var charAfter = lines[i].charAt(labMatch.index + labMatch[0].length);
+      if (/[A-Za-z0-9]/.test(charBefore) || /[A-Za-z0-9]/.test(charAfter)) continue;
 
-      // 同一行で見つからない場合は次の行を見る
+      excludedLines[i] = true;
+
+      // ラベル位置以降の同一行
+      var afterLabel = lines[i].substring(labMatch.index + labMatch[0].length);
+      var nums = collectAmountCandidates(afterLabel);
+
+      // 同一行で見つからない場合は次の行
       if (nums.length === 0 && i + 1 < lines.length) {
-        nums = collectAmounts(lines[i + 1]);
+        nums = collectAmountCandidates(lines[i + 1]);
       }
 
-      // 金額は税率より大きいはずなので最大値を採用
+      // 最初に見つかった数値を返す(ラベルに最も近いもの)
       if (nums.length > 0) {
-        return Math.max.apply(null, nums);
+        return nums[0];
       }
     }
   }
 
   return 0;
+}
+
+/**
+ * 論理ラベルから表記バリエーション配列を取得(具体的な順に並ぶ)
+ * @param {string} label - '合計' | '小計' | '消費税'
+ * @return {string[]}
+ */
+function getAmountLabelVariants(label) {
+  if (label === '消費税') {
+    return [
+      '消費税額等', '消費税額', '消費税等', '内消費税', 'うち消費税',
+      'Sales Tax', 'VAT', 'GST',
+      '税額', '消費税', 'Tax',
+      '税',  // 最後の手段(短い単独ラベル、他の税系ラベルが先にマッチするので安全)
+    ];
+  }
+  if (label === '小計') {
+    return [
+      '小計金額', '税抜合計', '税抜金額',
+      'Sub-Total', 'Sub Total', 'Subtotal',
+      '小計',
+    ];
+  }
+  if (label === '合計') {
+    // 具体的な表記を先に、汎用な 'Total' / '合計' を最後に
+    return [
+      'ご請求金額', '御請求金額', 'ご請求額', '請求金額',
+      '合計金額', '税込合計', 'お支払金額', '御注文金額', '注文金額合計',
+      '総額', '総計',
+      'Grand Total', 'Total Due', 'Balance Due', 'Amount Due',
+      '合計', 'Total',
+    ];
+  }
+  return [label];
+}
+
+/**
+ * 行から金額候補の数値を列挙(% 後続は除外)
+ * @param {string} line
+ * @return {number[]}
+ */
+function collectAmountCandidates(line) {
+  var amounts = [];
+  var re = /[¥￥]?\s*([\d,]+)(\s*[%％])?/g;
+  var m;
+  while ((m = re.exec(line)) !== null) {
+    if (m[2]) continue;
+    var n = parseNumber(m[1]);
+    if (n > 0) amounts.push(n);
+  }
+  return amounts;
 }
 
 /**
@@ -536,17 +949,43 @@ function parseGenericTable(text) {
  * @return {string} 'invoice' | 'table' | 'text'
  */
 function detectContentType(text) {
-  // ビジネス書類のキーワード判定（誤分類が起きにくい順）
-  if (/見積書|御見積|見積金額|見積番号|Quotation/.test(text)) return 'quote';
-  if (/注文書|発注書|注文番号|発注番号|Purchase\s*Order/.test(text)) return 'order';
-  if (/納品書|納品日/.test(text)) return 'delivery';
-  if (/領収書|領収証|但し書き/.test(text)) return 'receipt';
-  if (/請求書|御請求|請求金額|請求番号|Invoice/.test(text)) return 'invoice';
+  // 契約書固有のタイトル表記は他の書類名を本文中に含みがちなので最優先で判定
+  // (例: "業務委託契約書" の中の "請求書受領後" が 'invoice' と誤判定されるのを防ぐ)
+  var strongContractTitles = [
+    '業務委託契約書', '売買契約書', '雇用契約書', '賃貸借契約書',
+    '秘密保持契約書', '業務提携契約書', '委任契約書', '請負契約書',
+    '簡易業務委託契約書', 'Service Agreement', 'Non-Disclosure Agreement', 'NDA',
+  ];
+  for (var si = 0; si < strongContractTitles.length; si++) {
+    if (buildSpacedLabelRegex(strongContractTitles[si], 'i').test(text)) {
+      return 'contract';
+    }
+  }
 
-  // テキスト系書類
-  if (/議事録|出席者|議題|開催日時/.test(text)) return 'minutes';
-  if (/契約書|契約期間|第\s*[一二三四五六七八九十0-9]+\s*条/.test(text)) return 'contract';
-  if (/報告書|業務報告|月次報告/.test(text)) return 'report';
+  // 装飾スペースを吸収するため、キーワード群それぞれを buildSpacedLabelRegex で試す
+  var categories = [
+    ['quote',    ['見積書', '御見積書', '御見積', '見積金額', '見積番号', 'お見積', 'Quotation', 'Estimate']],
+    ['order',    ['注文書', '御注文', '発注書', '注文番号', '発注番号', '工事注文書', 'Purchase Order', 'PurchaseOrder', 'Order']],
+    ['delivery', ['納品書', '納品日', 'Delivery Note', 'DeliveryNote']],
+    ['receipt',  ['領収書', '領収証', '但し書き', 'Receipt']],
+    ['invoice',  ['適格請求書', 'ご請求書', '御請求書', '請求書', '御請求', '請求金額', '請求番号', 'せいきゅうしょ', 'Invoice']],
+    ['minutes',  ['議事録', '出席者', '議題', '開催日時', 'Minutes']],
+    ['contract', ['契約書', '契約期間', 'Agreement', 'Contract']],
+    ['report',   ['報告書', '業務報告', '月次報告', 'Report']],
+  ];
+
+  for (var c = 0; c < categories.length; c++) {
+    var type = categories[c][0];
+    var keywords = categories[c][1];
+    for (var k = 0; k < keywords.length; k++) {
+      if (buildSpacedLabelRegex(keywords[k], 'i').test(text)) {
+        return type;
+      }
+    }
+  }
+
+  // 「第◯条」は契約書の強いシグナル
+  if (/第\s*[一二三四五六七八九十0-9]+\s*条/.test(text)) return 'contract';
 
   // テーブルっぽい構造を検出（タブ区切りや連続スペースの行が複数）
   var lines = text.split('\n');

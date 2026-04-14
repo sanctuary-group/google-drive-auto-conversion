@@ -195,6 +195,43 @@ function normalizeFullWidth(text) {
 }
 
 /**
+ * OCR特有のノイズを正規化する共通レイヤー
+ * - 全角→半角
+ * - 全角スラッシュ・縦棒を改行扱いに（"小計 ¥X ／ 消費税 ¥Y" を行分解するため）
+ * - 連続空白を1個に縮約
+ * 装飾スペース("I n v o i c e")は正規表現側で `\s*` を挟んで吸収する方針とし、
+ * 本関数では破壊しない（"is a test" のような単語連結を誤って詰めるのを避けるため）
+ * @param {string} text
+ * @return {string}
+ */
+function normalizeOcrText(text) {
+  if (!text) return '';
+  var t = normalizeFullWidth(text);
+  t = t.replace(/[／｜]/g, '\n');
+  t = t.replace(/[ \u3000]{2,}/g, ' ');
+  return t;
+}
+
+/**
+ * 指定ラベルを「文字間に任意の空白が入っていても」マッチできる正規表現を構築
+ * 例: "Invoice" → /I\s*n\s*v\s*o\s*i\s*c\s*e/
+ *     "請求書"   → /請\s*求\s*書/
+ * これにより OCRが "I n v o i c e" / "請 求 書" のように装飾スペースを挟んでも検出できる
+ * @param {string} label
+ * @param {string} [flags] - 正規表現フラグ (例: 'i')
+ * @return {RegExp}
+ */
+function buildSpacedLabelRegex(label, flags) {
+  // ラベル内の空白は落とす("Amount Due" も "AmountDue" もマッチさせるため)
+  var chars = label.split('').filter(function(ch) {
+    return !/\s/.test(ch);
+  }).map(function(ch) {
+    return ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  });
+  return new RegExp(chars.join('\\s*'), flags || '');
+}
+
+/**
  * 数値文字列をパース（カンマ除去、全角→半角変換）
  * @param {string} str - 数値文字列
  * @return {number} パース結果（NaNの場合は0）
