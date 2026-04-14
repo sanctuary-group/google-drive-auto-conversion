@@ -224,7 +224,64 @@ function diagnose() {
     console.error('uploadフォルダにアクセスできません: ' + e.message);
   }
 
+  // Gemini 統計
+  try {
+    var stats = getGeminiStats();
+    console.log('');
+    console.log('[Gemini]');
+    console.log('  有効: ' + stats.enabled);
+    console.log('  APIキー設定: ' + (stats.hasKey ? '済' : '未'));
+    console.log('  本日の呼び出し: ' + stats.count + ' / ' + stats.limit);
+    if (stats.enabled && !stats.hasKey) {
+      console.log('  → API を有効化するには ScriptProperties の GEMINI_API_KEY にキーを設定してください');
+      console.log('  → キー取得: https://aistudio.google.com/apikey (無料)');
+    }
+  } catch (e) {
+    console.warn('Gemini統計取得失敗: ' + e.message);
+  }
+
   console.log('===== 診断終了 =====');
+}
+
+/**
+ * Gemini API の動作確認
+ * 架空の請求書テキストをGeminiに送って正しくパースできるかを確認する
+ */
+function testGemini() {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY');
+  if (!apiKey) {
+    console.error('GEMINI_API_KEY が未設定です。');
+    console.log('1. https://aistudio.google.com/apikey でAPIキーを取得(無料)');
+    console.log('2. GASエディタ → プロジェクトの設定 → スクリプトプロパティ で GEMINI_API_KEY に設定');
+    return;
+  }
+
+  var sampleText =
+    '請求書\n' +
+    'No. TEST-001 / 2026/04/15\n' +
+    'テスト株式会社 御中\n' +
+    'サンプル商事株式会社\n' +
+    '品目 数量 単価 金額\n' +
+    '商品A 2 ¥1,000 ¥2,000\n' +
+    '商品B 1 ¥3,000 ¥3,000\n' +
+    '小計 ¥5,000\n' +
+    '消費税 ¥500\n' +
+    '合計 ¥5,500';
+
+  console.log('===== Gemini テスト開始 =====');
+  console.log('送信テキスト:');
+  console.log(sampleText);
+  console.log('');
+
+  var result = extractInvoiceWithGemini(sampleText);
+  if (!result) {
+    console.error('Gemini 呼び出し失敗。ログを確認してください。');
+    return;
+  }
+
+  console.log('結果:');
+  console.log(JSON.stringify(result, null, 2));
+  console.log('===== Gemini テスト完了 =====');
 }
 
 // ===== セットアップ支援 =====
@@ -275,6 +332,17 @@ function setup() {
   console.log('');
   console.log('使い方: 上記「UPLOAD」フォルダにPDF/画像/Officeファイルを入れると、');
   console.log('        ' + CFG.trigger.intervalMinutes + '分以内に自動変換されます。');
+
+  // Gemini API の案内(オプション)
+  var hasGeminiKey = !!props.getProperty('GEMINI_API_KEY');
+  if (!hasGeminiKey) {
+    console.log('');
+    console.log('[オプション] 抽出精度を最大化するには Gemini API の無料キーを設定してください:');
+    console.log('  1. https://aistudio.google.com/apikey でAPIキーを発行(無料)');
+    console.log('  2. GASエディタ → プロジェクトの設定 → スクリプトプロパティ');
+    console.log('  3. GEMINI_API_KEY にキー文字列を貼り付けて保存');
+    console.log('  → 設定後、testGemini() で動作確認できます');
+  }
 }
 
 /**
