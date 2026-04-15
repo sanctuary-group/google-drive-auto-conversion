@@ -40,6 +40,10 @@ function parseLedgerEntry(text, fileName, fileLink) {
       invoice = mergeGeminiResult_(invoice, geminiResult);
       var mappedType = mapGeminiDocType_(geminiResult.docType);
       if (mappedType) contentType = mappedType;
+      // Gemini マージ後にも整合性が残っていれば warning を出す(運用観察用、補正はしない)
+      if (hasConsistencyIssue_(invoice)) {
+        console.warn('[parseLedgerEntry] Geminiマージ後も整合性エラーが残存: ' + fileName);
+      }
     }
   }
 
@@ -177,6 +181,61 @@ function parseInvoiceOnce(normalized, original) {
 }
 
 /**
+ * 抽出済みデータの内部整合性をチェックする
+ * 正規表現が間違った値を拾った場合の保険(フィールドの有無だけでは検出できない誤抽出を補う)
+ * @param {Object} invoice
+ * @return {boolean} 矛盾を検出したら true
+ */
+function hasConsistencyIssue_(invoice) {
+  // 1. 金額式: 外税(subtotal + tax = total)または内税(subtotal = total、tax は内訳)のどちらかが成立すればOK
+  if (invoice.total > 0 && invoice.subtotal > 0 && invoice.taxAmount > 0) {
+    var exclusiveDiff = Math.abs((invoice.subtotal + invoice.taxAmount) - invoice.total);
+    var inclusiveDiff = Math.abs(invoice.subtotal - invoice.total);
+    // どちらも許容範囲外なら矛盾
+    if (exclusiveDiff > 2 && inclusiveDiff > 2) {
+      console.warn('[consistency] 金額式不一致: subtotal(' + invoice.subtotal +
+                   ') tax(' + invoice.taxAmount + ') total(' + invoice.total +
+                   ') 外税差=' + exclusiveDiff + ' 内税差=' + inclusiveDiff);
+      return true;
+    }
+  }
+
+  // 2. 明細合計: 外税(sum ≒ subtotal 税抜)/内税(sum ≒ subtotal 税込=total)の両方を許容
+  //   ターゲット候補として [subtotal, total, subtotal-tax, total-tax] の最も近い値と比較
+  if (invoice.items && invoice.items.length >= 2 && invoice.subtotal > 0) {
+    var allHaveAmount = invoice.items.every(function(it) { return it.amount > 0; });
+    if (allHaveAmount) {
+      var itemsSum = invoice.items.reduce(function(a, it) { return a + it.amount; }, 0);
+      var targets = [invoice.subtotal];
+      if (invoice.total > 0) targets.push(invoice.total);
+      if (invoice.taxAmount > 0) {
+        targets.push(invoice.subtotal - invoice.taxAmount);
+        if (invoice.total > 0) targets.push(invoice.total - invoice.taxAmount);
+      }
+      var minDiff = Infinity;
+      for (var ti = 0; ti < targets.length; ti++) {
+        var d = Math.abs(itemsSum - targets[ti]);
+        if (d < minDiff) minDiff = d;
+      }
+      var ratio = minDiff / invoice.subtotal;
+      if (ratio > 0.02 && minDiff > 100) {
+        console.warn('[consistency] 明細合計不一致: itemsSum(' + itemsSum +
+                     ') が subtotal/total/税抜後 のいずれとも不一致 minDiff=' + minDiff);
+        return true;
+      }
+    }
+  }
+
+  // 3. 合計金額の妥当範囲(100円未満の請求書はほぼ存在しない)
+  if (invoice.total > 0 && invoice.total < 100) {
+    console.warn('[consistency] 合計金額が常識的範囲外: total=' + invoice.total);
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * 正規表現パース結果が不十分でGeminiを呼ぶべきかを判定
  * @param {Object} invoice
  * @param {string} contentType
@@ -194,6 +253,9 @@ function shouldCallGemini_(invoice, contentType) {
   if (!invoice.items || invoice.items.length === 0) {
     if (!invoice.subtotal) return true;
   }
+
+  // 整合性チェック(計算の自己矛盾があれば誤抽出の可能性が高いので LLM 救済対象)
+  if (hasConsistencyIssue_(invoice)) return true;
 
   // 品質スコアが閾値未満なら呼ぶ
   var score = scoreParseResult(invoice);
