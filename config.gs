@@ -10,7 +10,6 @@
 const PROP_KEYS = {
   upload: 'FOLDER_UPLOAD_ID',
   processed: 'FOLDER_PROCESSED_ID',
-  output: 'FOLDER_OUTPUT_ID',
   ledger: 'LEDGER_SPREADSHEET_ID',
 };
 
@@ -23,7 +22,6 @@ const CFG = {
   folders: {
     get upload() { return _getProp(PROP_KEYS.upload); },
     get processed() { return _getProp(PROP_KEYS.processed); },
-    get output() { return _getProp(PROP_KEYS.output); },
   },
 
   // OCR設定

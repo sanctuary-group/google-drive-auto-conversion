@@ -191,10 +191,9 @@ function diagnose() {
   console.log('===== 診断開始 =====');
   console.log('CFG.folders.upload: "' + CFG.folders.upload + '"');
   console.log('CFG.folders.processed: "' + CFG.folders.processed + '"');
-  console.log('CFG.folders.output: "' + CFG.folders.output + '"');
   console.log('CFG.ledger.spreadsheetId: "' + CFG.ledger.spreadsheetId + '"');
 
-  if (!CFG.folders.upload || !CFG.folders.processed || !CFG.folders.output || !CFG.ledger.spreadsheetId) {
+  if (!CFG.folders.upload || !CFG.folders.processed || !CFG.ledger.spreadsheetId) {
     console.error('初期セットアップが未完了です。GASエディタで setup() を実行してください');
     return;
   }
@@ -356,7 +355,6 @@ function setup() {
   var parentFolder = getOrCreateSubfolder(root, 'Googleドライブ自動変換');
   var uploadFolder = getOrCreateSubfolder(parentFolder, 'UPLOAD');
   var processedFolder = getOrCreateSubfolder(parentFolder, '処理済み');
-  var outputFolder = getOrCreateSubfolder(parentFolder, '出力');
 
   // 2. 取引台帳スプレッドシートを確保
   var ledgerFile = findOrCreateLedger_(parentFolder);
@@ -366,7 +364,6 @@ function setup() {
   props.setProperties({
     [PROP_KEYS.upload]: uploadFolder.getId(),
     [PROP_KEYS.processed]: processedFolder.getId(),
-    [PROP_KEYS.output]: outputFolder.getId(),
     [PROP_KEYS.ledger]: ledgerFile.getId(),
   });
 
@@ -378,7 +375,6 @@ function setup() {
   console.log('親フォルダ : ' + parentFolder.getUrl());
   console.log('UPLOAD    : ' + uploadFolder.getUrl());
   console.log('処理済み   : ' + processedFolder.getUrl());
-  console.log('出力      : ' + outputFolder.getUrl());
   console.log('取引台帳   : ' + ledgerFile.getUrl());
   console.log('');
   console.log('使い方: 上記「UPLOAD」フォルダにPDF/画像/Officeファイルを入れると、');
