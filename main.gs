@@ -105,8 +105,37 @@ function processSingleFile(file) {
     };
   }
 
-  // 台帳への書き込みは最低限保証する(ここで失敗すると上層 safeExecute に伝播)
-  appendToLedger(entry);
+  // 台帳への書き込みは最低限保証する。
+  // appendToLedger 自体が失敗した場合(権限/列ズレ等)、最小限のフィールドで再投入を試みる。
+  // それでも失敗した場合は上層 safeExecute に伝播させる。
+  try {
+    appendToLedger(entry);
+  } catch (appendErr) {
+    console.error('[appendToLedger 失敗] ' + fileName + ' / ' + appendErr.message);
+    if (appendErr.stack) console.error(appendErr.stack);
+    try {
+      appendToLedger({
+        processedAt: new Date(),
+        fileName: fileName,
+        fileLink: fileLink,
+        docType: 'その他',
+        vendor: '',
+        issueDate: '',
+        docNumber: '',
+        total: 0,
+        subtotal: 0,
+        tax: 0,
+        paymentDueDate: '',
+        contentSummary: '',
+        rawText: 'appendToLedger 失敗のため最小フィールドで再投入: ' + appendErr.message,
+        status: 'NG (append): ' + appendErr.message,
+      });
+      console.warn('appendToLedger 再投入成功(最小フィールド): ' + fileName);
+    } catch (retryErr) {
+      console.error('[appendToLedger 再投入も失敗] ' + retryErr.message);
+      throw retryErr;
+    }
+  }
 
   // 一時的に作った変換物を削除(失敗しても処理継続)
   if (tempDocId) {
@@ -205,6 +234,87 @@ function processManual(fileId) {
   }, 'manual: ' + file.getName(), file.getName());
 
   console.log('手動処理完了');
+}
+
+/**
+ * 手動再処理用: ファイル名のリストを指定して、`[PROCESSED]` マークを無視して強制実行
+ * UPLOAD フォルダおよび PROCESSED フォルダ(サブフォルダ含む再帰探索)から名前検索する。
+ *
+ * 用途: 「行欠落で台帳に書かれなかったファイル」を名前指定で再処理し、ログから原因特定する。
+ * 例: processAllManual(['2026.3請求書-株式会社スカイ御中（株式会社Mira）.pdf', '請求書2026.04.01 ㈱スカイ様.pdf']);
+ *
+ * @param {string[]} fileNames - 再処理対象のファイル名(完全一致)
+ */
+function processAllManual(fileNames) {
+  if (!fileNames || fileNames.length === 0) {
+    console.log('使い方: processAllManual([ファイル名1, ファイル名2, ...])');
+    return;
+  }
+  if (!CFG.folders.upload && !CFG.folders.processed) {
+    console.error('初期セットアップ未完了です。setup() を実行してください');
+    return;
+  }
+
+  for (var i = 0; i < fileNames.length; i++) {
+    var name = fileNames[i];
+    var file = findFileByName_(name);
+    if (!file) {
+      console.warn('見つからない: ' + name);
+      continue;
+    }
+    console.log('手動再処理: ' + name + ' (' + file.getId() + ')');
+    // [PROCESSED] マークを一時的に剥がす(processSingleFile は isProcessed を見ないが、
+    // 念のため description をクリアして既処理判定の副作用を回避)
+    try {
+      var desc = file.getDescription() || '';
+      if (desc.indexOf('[PROCESSED]') !== -1) {
+        file.setDescription(desc.replace(/\[PROCESSED\]\s*/, ''));
+      }
+    } catch (descErr) {
+      console.warn('description クリア失敗: ' + descErr.message);
+    }
+    safeExecute(function() {
+      return processSingleFile(file);
+    }, 'reprocess: ' + name, name);
+  }
+  console.log('再処理完了: ' + fileNames.length + ' 件');
+}
+
+/**
+ * UPLOAD / PROCESSED フォルダから指定名のファイルを探す(再帰)
+ * 最初に見つかった 1 件を返す
+ * @param {string} name
+ * @return {GoogleAppsScript.Drive.File|null}
+ */
+function findFileByName_(name) {
+  function searchInFolder(folder) {
+    var iter = folder.getFilesByName(name);
+    if (iter.hasNext()) return iter.next();
+    var subs = folder.getFolders();
+    while (subs.hasNext()) {
+      var hit = searchInFolder(subs.next());
+      if (hit) return hit;
+    }
+    return null;
+  }
+  if (CFG.folders.upload) {
+    var hit1 = searchInFolder(DriveApp.getFolderById(CFG.folders.upload));
+    if (hit1) return hit1;
+  }
+  if (CFG.folders.processed) {
+    var hit2 = searchInFolder(DriveApp.getFolderById(CFG.folders.processed));
+    if (hit2) return hit2;
+  }
+  return null;
+}
+
+/**
+ * processAllManual の Gemini 不使用版
+ * @param {string[]} fileNames
+ */
+function processAllManualNoGemini(fileNames) {
+  console.log('Gemini 抑止モードで強制再処理します');
+  withoutGemini_(function() { processAllManual(fileNames); });
 }
 
 /**

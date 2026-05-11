@@ -296,6 +296,26 @@ function parseInvoiceOnce(normalized, original) {
     }
   }
 
+  // 最終整合性 fail-safe:
+  //   subtotal + tax ≒ total (外税) でも subtotal ≒ total (内税) でもない場合、
+  //   subtotal を total - tax に強制補正する。途中ロジック(items_sum/extractAmount('小計')/
+  //   extractAmountTriplet_ 等)が誤った subtotal を返した時のフェイルセーフ。
+  //   例: Row 3 (kii) で subtotal=450 (=tax と同値) → 4,500 に補正
+  if (result.total > 0 && result.taxAmount > 0 && result.subtotal > 0) {
+    var fsOuterDiff = Math.abs((result.subtotal + result.taxAmount) - result.total);
+    var fsInnerDiff = Math.abs(result.subtotal - result.total);
+    if (fsOuterDiff > 2 && fsInnerDiff > 2) {
+      var fsCorrected = result.total - result.taxAmount;
+      // 補正後に外税式が成立し、かつ subtotal が tax より大きいことを確認(妥当範囲)
+      if (fsCorrected > 0 && fsCorrected > result.taxAmount &&
+          Math.abs((fsCorrected + result.taxAmount) - result.total) <= 2) {
+        console.warn('[fail-safe] subtotal(' + result.subtotal +
+                     ') が外税/内税のいずれにも当てはまらないため total-tax(' + fsCorrected + ') に補正');
+        result.subtotal = fsCorrected;
+      }
+    }
+  }
+
   return result;
 }
 
