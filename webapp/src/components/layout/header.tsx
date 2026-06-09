@@ -1,0 +1,46 @@
+"use client";
+
+import { Bell, LogOut } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { RoleSwitcher } from "./role-switcher";
+import { useCurrentRole } from "@/mocks/currentRole";
+import Link from "next/link";
+
+const ROLE_USER: Record<string, { name: string; email: string }> = {
+  sanctuary: { name: "稲葉 翔", email: "inaba@sanctuary.example" },
+  tenantAdmin: { name: "山本 智也", email: "yamamoto@sky.example" },
+  manager: { name: "竹下 直樹", email: "takeshita@sky.example" },
+  user: { name: "永田 晶子", email: "nagata@sky.example" },
+};
+
+export function Header({ title }: { title?: string }) {
+  const { role, mounted } = useCurrentRole();
+  const u = mounted ? ROLE_USER[role] : ROLE_USER.tenantAdmin;
+  const initials = u.name.slice(0, 1);
+  return (
+    <header className="h-14 border-b bg-background flex items-center justify-between px-4 lg:px-6 gap-3">
+      <div className="text-sm font-medium text-muted-foreground">{title}</div>
+      <div className="flex items-center gap-3">
+        <RoleSwitcher />
+        <Button variant="ghost" size="icon" className="size-8">
+          <Bell className="size-4" />
+        </Button>
+        <div className="flex items-center gap-2 pl-3 border-l">
+          <Avatar className="size-7">
+            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+          </Avatar>
+          <div className="hidden md:block text-xs leading-tight">
+            <div className="font-medium">{u.name}</div>
+            <div className="text-muted-foreground">{u.email}</div>
+          </div>
+          <Button asChild variant="ghost" size="icon" className="size-8" title="ログアウト">
+            <Link href="/login">
+              <LogOut className="size-4" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}

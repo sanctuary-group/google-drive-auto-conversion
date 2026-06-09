@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls *.gs *.js)",
+      "Bash(grep -v '^$')",
+      "Bash(node -e ':*)",
+      "Bash(node /tmp/test_parser2.js)",
+      "Bash(node /tmp/test_all.js)",
+      "Bash(node /tmp/test_due.js)",
+      "Bash(node /tmp/check_0042.js)",
+      "Bash(ls /Users/macaryu/Downloads/請求書デモ用/html/*.html)",
+      "Bash(node /tmp/test_3fails.js)",
+      "Bash(node /tmp/test_4new.js)",
+      "Bash(node --check gemini.gs)",
+      "Bash(node --check main.gs)",
+      "Bash(cp gemini.gs /tmp/g.js)",
+      "Bash(cp main.gs /tmp/m.js)",
+      "Bash(node --check /tmp/g.js)",
+      "Bash(node --check /tmp/m.js)",
+      "Bash(cp config.gs /tmp/c.js)",
+      "Bash(node --check /tmp/c.js)",
+      "Bash(node --check /tmp/u.js)",
+      "Bash(node --check /tmp/p.js)",
+      "Bash(node -e ' *)",
+      "Bash(cp utils.gs /tmp/u.js)",
+      "Bash(cp parser.gs /tmp/p.js)",
+      "Bash(cp spreadsheet.gs /tmp/s.js)",
+      "Bash(node --check /tmp/s.js)",
+      "WebSearch",
+      "WebFetch(domain:www.nta.go.jp)"
+    ]
+  }
+}
