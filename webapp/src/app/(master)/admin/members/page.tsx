@@ -11,15 +11,14 @@ import { members } from "@/mocks/members";
 import { tenants } from "@/mocks/tenants";
 
 const ROLE_LABEL: Record<string, string> = {
-  sanctuary: "サンクチュアリ",
-  tenantAdmin: "テナント管理者",
+  master: "マスター管理",
   manager: "マネージャー",
   user: "ユーザー",
 };
 
 export default function AdminMembersPage() {
   const adminish = members.filter(
-    (m) => m.role === "sanctuary" || m.role === "tenantAdmin" || m.role === "manager",
+    (m) => m.role === "master" || m.role === "manager",
   );
   return (
     <PageShell
@@ -64,7 +63,7 @@ export default function AdminMembersPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{m.email}</TableCell>
                   <TableCell>
-                    <StatusBadge variant={m.role === "sanctuary" ? "ok" : m.role === "tenantAdmin" ? "info" : "muted"}>
+                    <StatusBadge variant={m.role === "master" ? "ok" : "muted"}>
                       {ROLE_LABEL[m.role]}
                     </StatusBadge>
                   </TableCell>

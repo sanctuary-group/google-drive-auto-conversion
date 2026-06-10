@@ -17,17 +17,17 @@ export const MASTER_NAV: NavSection[] = [
   {
     title: "マスター管理",
     items: [
-      { href: "/admin/tenants", label: "テナント一覧", icon: "Building2", roles: ["sanctuary"] },
-      { href: "/admin/companies", label: "会社一覧", icon: "Briefcase", roles: ["sanctuary", "tenantAdmin"] },
-      { href: "/admin/members", label: "管理者", icon: "Users", roles: ["sanctuary", "tenantAdmin"] },
-      { href: "/admin/billing", label: "プラン・請求", icon: "CreditCard", roles: ["sanctuary", "tenantAdmin"] },
+      { href: "/admin/tenants", label: "テナント一覧", icon: "Building2", roles: ["master"] },
+      { href: "/admin/companies", label: "会社一覧", icon: "Briefcase", roles: ["master"] },
+      { href: "/admin/members", label: "管理者", icon: "Users", roles: ["master"] },
+      { href: "/admin/billing", label: "プラン・請求", icon: "CreditCard", roles: ["master"] },
     ],
   },
   {
     title: "運営",
     items: [
-      { href: "/admin/system", label: "システム監視", icon: "Activity", roles: ["sanctuary"] },
-      { href: "/admin/settings", label: "テナント設定", icon: "Settings", roles: ["sanctuary", "tenantAdmin"] },
+      { href: "/admin/system", label: "システム監視", icon: "Activity", roles: ["master"] },
+      { href: "/admin/settings", label: "テナント設定", icon: "Settings", roles: ["master"] },
     ],
   },
 ];

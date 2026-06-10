@@ -1,4 +1,4 @@
-export type Role = "sanctuary" | "tenantAdmin" | "manager" | "user";
+export type Role = "master" | "manager" | "user";
 
 export interface Tenant {
   id: string;

@@ -8,15 +8,14 @@ import { useCurrentRole } from "@/mocks/currentRole";
 import Link from "next/link";
 
 const ROLE_USER: Record<string, { name: string; email: string }> = {
-  sanctuary: { name: "稲葉 翔", email: "inaba@sanctuary.example" },
-  tenantAdmin: { name: "山本 智也", email: "yamamoto@sky.example" },
+  master: { name: "山本 智也", email: "yamamoto@sky.example" },
   manager: { name: "竹下 直樹", email: "takeshita@sky.example" },
   user: { name: "永田 晶子", email: "nagata@sky.example" },
 };
 
 export function Header({ title }: { title?: string }) {
   const { role, mounted } = useCurrentRole();
-  const u = mounted ? ROLE_USER[role] : ROLE_USER.tenantAdmin;
+  const u = mounted ? ROLE_USER[role] : ROLE_USER.master;
   const initials = u.name.slice(0, 1);
   return (
     <header className="h-14 border-b bg-background flex items-center justify-between px-4 lg:px-6 gap-3">

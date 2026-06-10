@@ -2,12 +2,12 @@ import type { Member } from "./types";
 
 export const members: Member[] = [
   // サンクチュアリ運営
-  { id: "m-sct-1", name: "稲葉 翔", email: "inaba@sanctuary.example", role: "sanctuary", lastLoginAt: "2026-06-09 10:14", avatarSeed: 1 },
-  { id: "m-sct-2", name: "佐藤 健介", email: "sato@sanctuary.example", role: "sanctuary", lastLoginAt: "2026-06-08 19:02", avatarSeed: 2 },
+  { id: "m-sct-1", name: "稲葉 翔", email: "inaba@sanctuary.example", role: "master", lastLoginAt: "2026-06-09 10:14", avatarSeed: 1 },
+  { id: "m-sct-2", name: "佐藤 健介", email: "sato@sanctuary.example", role: "master", lastLoginAt: "2026-06-08 19:02", avatarSeed: 2 },
 
   // 先方(株式会社スカイ)テナント管理者
-  { id: "m-sky-admin-1", tenantId: "tenant-sky", name: "山本 智也", email: "yamamoto@sky.example", role: "tenantAdmin", lastLoginAt: "2026-06-09 09:32", avatarSeed: 3 },
-  { id: "m-sky-admin-2", tenantId: "tenant-sky", name: "三好 麻里", email: "miyoshi@sky.example", role: "tenantAdmin", lastLoginAt: "2026-06-08 18:11", avatarSeed: 4 },
+  { id: "m-sky-admin-1", tenantId: "tenant-sky", name: "山本 智也", email: "yamamoto@sky.example", role: "master", lastLoginAt: "2026-06-09 09:32", avatarSeed: 3 },
+  { id: "m-sky-admin-2", tenantId: "tenant-sky", name: "三好 麻里", email: "miyoshi@sky.example", role: "master", lastLoginAt: "2026-06-08 18:11", avatarSeed: 4 },
 
   // 会社マネージャー
   { id: "m-sky-main-mgr-1", tenantId: "tenant-sky", companyId: "company-sky-main", name: "竹下 直樹", email: "takeshita@sky.example", role: "manager", lastLoginAt: "2026-06-09 08:55", avatarSeed: 5 },
@@ -29,6 +29,6 @@ export function getMembersByCompany(companyId: string) {
   return members.filter((m) => m.companyId === companyId);
 }
 
-export function getTenantAdmins(tenantId: string) {
-  return members.filter((m) => m.tenantId === tenantId && m.role === "tenantAdmin");
+export function getTenantMasters(tenantId: string) {
+  return members.filter((m) => m.tenantId === tenantId && m.role === "master");
 }

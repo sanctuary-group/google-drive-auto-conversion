@@ -6,13 +6,12 @@ import type { Role } from "./types";
 const KEY = "ledger-webapp-role";
 
 export const ROLE_LABELS: Record<Role, string> = {
-  sanctuary: "サンクチュアリ (運営)",
-  tenantAdmin: "先方 テナント管理者",
+  master: "マスター管理 (サンクチュアリ / 先方)",
   manager: "会社マネージャー",
   user: "ユーザー",
 };
 
-export const DEFAULT_ROLE: Role = "tenantAdmin";
+export const DEFAULT_ROLE: Role = "master";
 
 export function useCurrentRole() {
   const [role, setRoleState] = useState<Role>(DEFAULT_ROLE);
