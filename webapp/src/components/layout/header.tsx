@@ -14,14 +14,25 @@ const ROLE_USER: Record<string, { name: string; email: string }> = {
   user: { name: "永田 晶子", email: "nagata@sky.example" },
 };
 
-export function Header({ title }: { title?: string }) {
+export function Header({
+  title,
+  leading,
+}: {
+  title?: string;
+  leading?: React.ReactNode;
+}) {
   const { role, mounted } = useCurrentRole();
   const u = mounted ? ROLE_USER[role] : ROLE_USER.master;
   const initials = u.name.slice(0, 1);
   return (
-    <header className="h-14 border-b bg-background flex items-center justify-between px-4 lg:px-6 gap-3">
-      <div className="text-sm font-medium text-muted-foreground">{title}</div>
-      <div className="flex items-center gap-3">
+    <header className="h-14 border-b bg-background flex items-center justify-between px-3 sm:px-4 lg:px-6 gap-2 sm:gap-3 shrink-0">
+      <div className="flex items-center gap-2 min-w-0">
+        {leading}
+        <div className="text-sm font-medium text-muted-foreground truncate hidden sm:block">
+          {title}
+        </div>
+      </div>
+      <div className="flex items-center gap-1.5 sm:gap-3">
         <RoleSwitcher />
         <Button asChild variant="ghost" size="icon" className="size-8 relative">
           <Link href="/app/notifications" title="通知">
@@ -33,11 +44,11 @@ export function Header({ title }: { title?: string }) {
             )}
           </Link>
         </Button>
-        <div className="flex items-center gap-2 pl-3 border-l">
+        <div className="flex items-center gap-2 sm:pl-3 sm:border-l">
           <Avatar className="size-7">
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>
           </Avatar>
-          <div className="hidden md:block text-xs leading-tight">
+          <div className="hidden xl:block text-xs leading-tight">
             <div className="font-medium">{u.name}</div>
             <div className="text-muted-foreground">{u.email}</div>
           </div>

@@ -17,7 +17,7 @@ export function RoleSwitcher() {
     <div className="flex items-center gap-2">
       <span className="text-xs text-muted-foreground hidden md:inline">モックロール</span>
       <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-        <SelectTrigger className="h-8 w-[200px] text-xs">
+        <SelectTrigger className="h-8 w-[140px] sm:w-[200px] text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>

@@ -1,5 +1,4 @@
-import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
+import { AppShell } from "@/components/layout/app-shell";
 import { RoleGuard } from "@/components/layout/role-guard";
 import { MASTER_NAV } from "@/lib/nav";
 
@@ -9,13 +8,11 @@ export default function MasterLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen">
+    <>
       <RoleGuard allow={["master"]} />
-      <Sidebar sections={MASTER_NAV} title="Ledger SaaS" />
-      <div className="flex-1 flex flex-col min-w-0">
-        <Header title="マスター管理コンソール" />
+      <AppShell sections={MASTER_NAV} sidebarTitle="Ledger SaaS" headerTitle="マスター管理コンソール">
         {children}
-      </div>
-    </div>
+      </AppShell>
+    </>
   );
 }

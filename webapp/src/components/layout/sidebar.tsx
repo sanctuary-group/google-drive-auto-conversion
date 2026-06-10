@@ -49,20 +49,22 @@ const ICONS: Record<string, IconCmp> = {
   CircleHelp,
 };
 
-export function Sidebar({
+export function SidebarContent({
   sections,
   title,
+  onNavigate,
 }: {
   sections: NavSection[];
   title: string;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const { role, mounted } = useCurrentRole();
-  if (!mounted) return <aside className="w-64 border-r bg-sidebar" />;
+  if (!mounted) return <div className="h-full" />;
   const visible = filterNavByRole(sections, role);
   return (
-    <aside className="w-64 shrink-0 border-r bg-sidebar text-sidebar-foreground flex flex-col">
-      <div className="px-5 h-14 flex items-center gap-2 border-b">
+    <div className="h-full flex flex-col bg-sidebar text-sidebar-foreground">
+      <div className="px-5 h-14 flex items-center gap-2 border-b shrink-0">
         <span className="inline-flex size-7 rounded-lg bg-primary text-primary-foreground items-center justify-center">
           <Receipt className="size-4" />
         </span>
@@ -82,6 +84,7 @@ export function Sidebar({
                   <li key={item.href}>
                     <Link
                       href={item.href}
+                      onClick={onNavigate}
                       className={cn(
                         "flex items-center gap-2 mx-1 px-3 py-2 rounded-md text-sm transition-colors",
                         active
@@ -99,9 +102,23 @@ export function Sidebar({
           </div>
         ))}
       </nav>
-      <div className="border-t p-3 text-[11px] text-muted-foreground">
+      <div className="border-t p-3 text-[11px] text-muted-foreground shrink-0">
         Ledger SaaS · モック v0.1
       </div>
+    </div>
+  );
+}
+
+export function Sidebar({
+  sections,
+  title,
+}: {
+  sections: NavSection[];
+  title: string;
+}) {
+  return (
+    <aside className="hidden lg:flex w-64 shrink-0 border-r flex-col">
+      <SidebarContent sections={sections} title={title} />
     </aside>
   );
 }
