@@ -41,15 +41,15 @@ export default function LoginPage() {
           <div className="font-medium text-foreground">モック用 ショートカット</div>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="ghost" size="sm">
-              <Link href="/admin/tenants">サンクチュアリ画面へ</Link>
-            </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/admin/companies">先方画面へ</Link>
+              <Link href="/admin/tenants">マスター管理画面へ</Link>
             </Button>
             <Button asChild variant="ghost" size="sm">
               <Link href="/app/dashboard">会社ワークスペースへ</Link>
             </Button>
           </div>
+          <p className="text-[11px] text-muted-foreground">
+            ログイン後、画面右上の「モックロール」セレクターで「マスター管理 / マネージャー / ユーザー」を切替できます。
+          </p>
         </div>
       </CardContent>
     </Card>
