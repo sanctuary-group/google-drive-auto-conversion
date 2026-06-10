@@ -51,15 +51,31 @@ export default function ProfilePage() {
 
   return (
     <PageShell title="マイアカウント" description="自分のプロフィール・セキュリティ・通知設定">
-      {/* フォルダタブ風 */}
-      <div className="flex items-end gap-1 px-2 -mb-px relative z-10">
+      {/* モバイル: セレクトボックス */}
+      <div className="sm:hidden mb-3">
+        <Select value={tab} onValueChange={(v) => setTab(v as TabKey)}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {TABS.map((t) => (
+              <SelectItem key={t.key} value={t.key}>
+                <span className="flex items-center gap-2">{t.icon}{t.label}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* タブレット以上: フォルダタブ風 (横スクロール可) */}
+      <div className="hidden sm:flex items-end gap-1 px-2 -mb-px relative z-10 overflow-x-auto scrollbar-none">
         {TABS.map((t) => {
           const active = tab === t.key;
           return (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`inline-flex items-center gap-2 px-4 pt-2.5 pb-3 text-sm rounded-t-lg border border-b-0 transition ${
+              className={`inline-flex items-center gap-2 px-3 md:px-4 pt-2.5 pb-3 text-sm rounded-t-lg border border-b-0 whitespace-nowrap transition ${
                 active
                   ? "bg-card text-foreground border-border font-medium"
                   : "bg-muted/40 text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
@@ -73,7 +89,7 @@ export default function ProfilePage() {
       </div>
 
       {/* 共通の大きなカード */}
-      <div className="bg-card border rounded-lg rounded-tl-none shadow-sm">
+      <div className="bg-card border rounded-lg sm:rounded-tl-none shadow-sm">
         {tab === "profile" && <ProfileTab />}
         {tab === "security" && <SecurityTab />}
         {tab === "notifications" && <NotificationsTab />}
@@ -87,28 +103,30 @@ export default function ProfilePage() {
 function ProfileTab() {
   return (
     <div className="divide-y">
-      <div className="p-6 flex items-center gap-5">
-        <Avatar className="size-20">
-          <AvatarFallback className="text-2xl bg-primary/15 text-primary font-semibold">山</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h2 className="text-lg font-semibold">山本 智也</h2>
-            <StatusBadge variant="info">マネージャー</StatusBadge>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5"><AtSign className="size-3.5" />yamamoto@sky.example</span>
-            <span className="flex items-center gap-1.5"><Building2 className="size-3.5" />株式会社スカイ</span>
-            <span className="flex items-center gap-1.5"><Calendar className="size-3.5" />参加 2025/08/12</span>
+      <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-5">
+        <div className="flex items-center gap-4 sm:gap-5 sm:flex-1 min-w-0">
+          <Avatar className="size-16 sm:size-20 shrink-0">
+            <AvatarFallback className="text-xl sm:text-2xl bg-primary/15 text-primary font-semibold">山</AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-lg font-semibold">山本 智也</h2>
+              <StatusBadge variant="info">マネージャー</StatusBadge>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-x-4 gap-y-1 mt-1.5 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5 min-w-0"><AtSign className="size-3.5 shrink-0" /><span className="truncate">yamamoto@sky.example</span></span>
+              <span className="flex items-center gap-1.5"><Building2 className="size-3.5 shrink-0" />株式会社スカイ</span>
+              <span className="flex items-center gap-1.5"><Calendar className="size-3.5 shrink-0" />参加 2025/08/12</span>
+            </div>
           </div>
         </div>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="self-stretch sm:self-auto">
           <Upload className="size-4" />
           画像を変更
         </Button>
       </div>
 
-      <div className="p-6 space-y-5">
+      <div className="p-4 sm:p-6 space-y-5">
         <SectionTitle>基本情報</SectionTitle>
         <div className="grid gap-4 md:grid-cols-2">
           <Field id="lname" label="姓" defaultValue="山本" />
@@ -146,7 +164,7 @@ function ProfileTab() {
         </div>
       </div>
 
-      <div className="px-6 py-4 flex justify-between items-center bg-muted/20">
+      <div className="px-4 sm:px-6 py-4 flex flex-col sm:flex-row gap-2 sm:gap-0 justify-between items-center bg-muted/20">
         <div className="text-xs text-muted-foreground">最終更新: 2026/05/28</div>
         <div className="flex gap-2">
           <Button variant="ghost" size="sm">キャンセル</Button>
@@ -161,7 +179,7 @@ function ProfileTab() {
 function SecurityTab() {
   return (
     <div className="divide-y">
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <SectionTitle icon={<KeyRound className="size-4" />}>パスワード</SectionTitle>
         <div className="text-xs text-muted-foreground -mt-2">最終変更: 3 ヶ月前</div>
         <div className="grid gap-4 md:grid-cols-3">
@@ -188,7 +206,7 @@ function SecurityTab() {
         </div>
       </div>
 
-      <div className="p-6 space-y-4">
+      <div className="p-4 sm:p-6 space-y-4">
         <div className="flex items-center justify-between">
           <SectionTitle icon={<Shield className="size-4" />}>
             二段階認証 <StatusBadge variant="ok">有効</StatusBadge>
@@ -219,7 +237,7 @@ function SecurityTab() {
         </div>
       </div>
 
-      <div className="p-6 space-y-3">
+      <div className="p-4 sm:p-6 space-y-3">
         <SectionTitle icon={<ShieldCheck className="size-4 text-emerald-500" />}>アカウント保護</SectionTitle>
         <div className="grid gap-2 md:grid-cols-3">
           <ProtectionStat done label="パスワード" />
@@ -228,7 +246,7 @@ function SecurityTab() {
         </div>
       </div>
 
-      <div className="p-6 space-y-3 bg-destructive/5">
+      <div className="p-4 sm:p-6 space-y-3 bg-destructive/5">
         <SectionTitle icon={<TriangleAlert className="size-4 text-destructive" />}>
           <span className="text-destructive">危険ゾーン</span>
         </SectionTitle>
@@ -267,15 +285,15 @@ function NotificationsTab() {
 function SessionsTab() {
   return (
     <div>
-      <div className="p-6 flex items-center justify-between">
+      <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <SectionTitle>アクティブなセッション</SectionTitle>
           <div className="text-xs text-muted-foreground mt-1">現在ログイン中のすべての端末</div>
         </div>
-        <Button variant="destructive" size="sm">他端末からすべてログアウト</Button>
+        <Button variant="destructive" size="sm" className="w-full sm:w-auto">他端末からすべてログアウト</Button>
       </div>
       <Separator />
-      <div className="p-6 grid gap-3 md:grid-cols-2">
+      <div className="p-4 sm:p-6 grid gap-3 md:grid-cols-2">
         <SessionCard device="MacBook Pro" browser="Chrome 130" os="macOS 15.2" loc="東京, JP" ip="203.0.113.42" lastActive="アクティブ" icon="laptop" current />
         <SessionCard device="iPhone 15" browser="Safari" os="iOS 18.2" loc="東京, JP" ip="203.0.113.42" lastActive="2 時間前" icon="phone" />
         <SessionCard device="Windows Desktop" browser="Edge 129" os="Windows 11" loc="大阪, JP" ip="198.51.100.7" lastActive="7 日前" icon="laptop" stale />
@@ -349,7 +367,7 @@ const CHANNEL_META: Record<Channel, { label: string; icon: React.ReactNode }> = 
 
 function NotifSection({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="p-6 space-y-3">
+    <div className="p-4 sm:p-6 space-y-3">
       <SectionTitle icon={icon}>{title}</SectionTitle>
       <div>{children}</div>
     </div>
@@ -387,22 +405,22 @@ function SessionCard({
   icon: "laptop" | "phone"; current?: boolean; stale?: boolean;
 }) {
   return (
-    <div className={`flex items-center justify-between gap-3 rounded-lg border p-4 transition ${current ? "border-primary/30 bg-primary/5" : ""}`}>
-      <div className="flex items-center gap-3 min-w-0">
+    <div className={`flex items-center justify-between gap-2 sm:gap-3 rounded-lg border p-3 sm:p-4 transition ${current ? "border-primary/30 bg-primary/5" : ""}`}>
+      <div className="flex items-center gap-3 min-w-0 flex-1">
         <div className={`size-10 rounded-lg flex items-center justify-center shrink-0 ${current ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
           {icon === "laptop" ? <Laptop className="size-5" /> : <Smartphone className="size-5" />}
         </div>
-        <div className="min-w-0 space-y-0.5">
+        <div className="min-w-0 space-y-0.5 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm font-medium truncate">{device}</span>
             {current && <StatusBadge variant="ok">このセッション</StatusBadge>}
             {stale && <StatusBadge variant="muted">非アクティブ</StatusBadge>}
           </div>
           <div className="text-xs text-muted-foreground truncate">{browser} · {os}</div>
-          <div className="text-[11px] text-muted-foreground font-mono">{loc} · {ip} · {lastActive}</div>
+          <div className="text-[11px] text-muted-foreground font-mono truncate">{loc} · {ip} · {lastActive}</div>
         </div>
       </div>
-      {!current && <Button variant="ghost" size="sm">ログアウト</Button>}
+      {!current && <Button variant="ghost" size="sm" className="shrink-0">ログアウト</Button>}
     </div>
   );
 }
