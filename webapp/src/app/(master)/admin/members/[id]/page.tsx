@@ -75,7 +75,7 @@ export default async function MemberDetailPage({
                 </div>
               )}
               {!tenant && !company && (
-                <div className="text-muted-foreground">サンクチュアリ運営(全テナント)</div>
+                <div className="text-muted-foreground">マスター管理者(全テナント)</div>
               )}
             </CardContent>
           </Card>

@@ -23,7 +23,7 @@ export default function OnboardingPage() {
   return (
     <PageShell
       title="新規テナント立ち上げ"
-      description="先方(顧客テナント)を 4 ステップで開設します"
+      description="新しい顧客テナントを 4 ステップで開設します"
     >
       <div className="grid gap-6 lg:grid-cols-[260px_1fr]">
         {/* Stepper */}

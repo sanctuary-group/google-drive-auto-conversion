@@ -24,7 +24,7 @@ export default function AdminMembersPage() {
   return (
     <PageShell
       title="管理者"
-      description="サンクチュアリ運営/先方管理者/会社マネージャーの一覧"
+      description="マスター管理者・会社マネージャーの一覧"
       actions={
         <Button>
           <Plus className="size-4" />

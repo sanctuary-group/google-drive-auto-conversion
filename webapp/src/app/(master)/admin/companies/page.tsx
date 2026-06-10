@@ -14,7 +14,7 @@ export default function CompaniesPage() {
   return (
     <PageShell
       title="会社一覧"
-      description="先方ロールでは自テナント配下、サンクチュアリは全テナント横断で表示されます。"
+      description="マスター管理から会社単位で運用状況を確認できます"
       actions={
         <Button>
           <Plus className="size-4" />

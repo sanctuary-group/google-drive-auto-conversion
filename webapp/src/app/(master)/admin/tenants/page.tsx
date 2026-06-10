@@ -15,7 +15,7 @@ export default function TenantsPage() {
   return (
     <PageShell
       title="テナント一覧"
-      description="先方(顧客テナント)を横断管理します。サンクチュアリのみアクセス可能。"
+      description="顧客テナントを横断管理します"
       actions={
         <Button>
           <Plus className="size-4" />

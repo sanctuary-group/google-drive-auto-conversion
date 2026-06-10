@@ -6,7 +6,7 @@ import type { Role } from "./types";
 const KEY = "ledger-webapp-role";
 
 export const ROLE_LABELS: Record<Role, string> = {
-  master: "マスター管理 (サンクチュアリ / 先方)",
+  master: "マスター管理",
   manager: "会社マネージャー",
   user: "ユーザー",
 };

@@ -1,11 +1,11 @@
 import type { Member } from "./types";
 
 export const members: Member[] = [
-  // サンクチュアリ運営
+  // マスター管理者(運営側)
   { id: "m-sct-1", name: "稲葉 翔", email: "inaba@sanctuary.example", role: "master", lastLoginAt: "2026-06-09 10:14", avatarSeed: 1 },
   { id: "m-sct-2", name: "佐藤 健介", email: "sato@sanctuary.example", role: "master", lastLoginAt: "2026-06-08 19:02", avatarSeed: 2 },
 
-  // 先方(株式会社スカイ)テナント管理者
+  // テナント管理者(株式会社スカイ)
   { id: "m-sky-admin-1", tenantId: "tenant-sky", name: "山本 智也", email: "yamamoto@sky.example", role: "master", lastLoginAt: "2026-06-09 09:32", avatarSeed: 3 },
   { id: "m-sky-admin-2", tenantId: "tenant-sky", name: "三好 麻里", email: "miyoshi@sky.example", role: "master", lastLoginAt: "2026-06-08 18:11", avatarSeed: 4 },
 
