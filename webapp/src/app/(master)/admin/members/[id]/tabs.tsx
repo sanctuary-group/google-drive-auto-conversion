@@ -1,16 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { History, Laptop, Shield, ShieldCheck, Smartphone } from "lucide-react";
 
+import { FolderTabs } from "@/components/layout/folder-tabs";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/status-badge";
 import {
@@ -21,14 +14,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-type TabKey = "activity" | "permissions" | "sessions";
-
-const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
-  { key: "activity", label: "操作履歴", icon: <History className="size-4" /> },
-  { key: "permissions", label: "権限", icon: <Shield className="size-4" /> },
-  { key: "sessions", label: "セッション", icon: <Laptop className="size-4" /> },
-];
 
 export type ActionItem = {
   id: string;
@@ -45,57 +30,32 @@ export function MemberDetailTabs({
   role: "master" | "manager" | "user";
   actions: ActionItem[];
 }) {
-  const [tab, setTab] = useState<TabKey>("activity");
-
   return (
-    <div>
-      {/* モバイル: セレクトボックス */}
-      <div className="sm:hidden mb-3">
-        <Select value={tab} onValueChange={(v) => setTab(v as TabKey)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {TABS.map((t) => (
-              <SelectItem key={t.key} value={t.key}>
-                <span className="flex items-center gap-2">{t.icon}{t.label}</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* タブレット以上: フォルダタブ風 */}
-      <div className="hidden sm:flex items-end gap-1 px-2 -mb-px relative z-10 overflow-x-auto scrollbar-none">
-        {TABS.map((t) => {
-          const active = tab === t.key;
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`inline-flex items-center gap-2 px-3 md:px-4 pt-2.5 pb-3 text-sm rounded-t-lg border border-b-0 whitespace-nowrap transition ${
-                active
-                  ? "bg-card text-foreground border-border font-medium"
-                  : "bg-muted/40 text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
-              }`}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="bg-card border rounded-lg sm:rounded-tl-none shadow-sm">
-        {tab === "activity" && <ActivityTab actions={actions} />}
-        {tab === "permissions" && <PermissionsTab role={role} />}
-        {tab === "sessions" && <SessionsTab />}
-      </div>
-    </div>
+    <FolderTabs
+      tabs={[
+        {
+          key: "activity",
+          label: "操作履歴",
+          icon: <History className="size-4" />,
+          content: <ActivityTab actions={actions} />,
+        },
+        {
+          key: "permissions",
+          label: "権限",
+          icon: <Shield className="size-4" />,
+          content: <PermissionsTab role={role} />,
+        },
+        {
+          key: "sessions",
+          label: "セッション",
+          icon: <Laptop className="size-4" />,
+          content: <SessionsTab />,
+        },
+      ]}
+    />
   );
 }
 
-/* ────────────────── 操作履歴 ────────────────── */
 function ActivityTab({ actions }: { actions: ActionItem[] }) {
   return (
     <div>
@@ -112,7 +72,6 @@ function ActivityTab({ actions }: { actions: ActionItem[] }) {
         </div>
       ) : (
         <>
-          {/* デスクトップ: テーブル */}
           <div className="hidden md:block">
             <Table>
               <TableHeader>
@@ -140,7 +99,6 @@ function ActivityTab({ actions }: { actions: ActionItem[] }) {
             </Table>
           </div>
 
-          {/* モバイル: タイムライン風カード */}
           <div className="md:hidden divide-y">
             {actions.map((a) => (
               <div key={a.id} className="p-4 space-y-1">
@@ -161,7 +119,6 @@ function ActivityTab({ actions }: { actions: ActionItem[] }) {
   );
 }
 
-/* ────────────────── 権限 ────────────────── */
 function PermissionsTab({ role }: { role: "master" | "manager" | "user" }) {
   const perms = [
     { label: "取引台帳の閲覧", allowed: true },
@@ -207,7 +164,6 @@ function PermissionsTab({ role }: { role: "master" | "manager" | "user" }) {
   );
 }
 
-/* ────────────────── セッション ────────────────── */
 function SessionsTab() {
   return (
     <div>
@@ -250,7 +206,6 @@ function SessionsTab() {
   );
 }
 
-/* ────────────────── 部品 ────────────────── */
 function SectionTitle({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
   return (
     <h3 className="text-sm font-semibold flex items-center gap-2">

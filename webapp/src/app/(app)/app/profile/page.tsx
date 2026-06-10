@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import {
   AtSign,
   Building2,
@@ -22,6 +19,7 @@ import {
 } from "lucide-react";
 
 import { PageShell } from "@/components/layout/page-shell";
+import { FolderTabs } from "@/components/layout/folder-tabs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,64 +35,17 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/status-badge";
 
-type TabKey = "profile" | "security" | "notifications" | "sessions";
-
-const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
-  { key: "profile", label: "プロフィール", icon: <UserRound className="size-4" /> },
-  { key: "security", label: "セキュリティ", icon: <Shield className="size-4" /> },
-  { key: "notifications", label: "通知", icon: <Mail className="size-4" /> },
-  { key: "sessions", label: "セッション", icon: <Laptop className="size-4" /> },
-];
-
 export default function ProfilePage() {
-  const [tab, setTab] = useState<TabKey>("profile");
-
   return (
     <PageShell title="マイアカウント" description="自分のプロフィール・セキュリティ・通知設定">
-      {/* モバイル: セレクトボックス */}
-      <div className="sm:hidden mb-3">
-        <Select value={tab} onValueChange={(v) => setTab(v as TabKey)}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {TABS.map((t) => (
-              <SelectItem key={t.key} value={t.key}>
-                <span className="flex items-center gap-2">{t.icon}{t.label}</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* タブレット以上: フォルダタブ風 (横スクロール可) */}
-      <div className="hidden sm:flex items-end gap-1 px-2 -mb-px relative z-10 overflow-x-auto scrollbar-none">
-        {TABS.map((t) => {
-          const active = tab === t.key;
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`inline-flex items-center gap-2 px-3 md:px-4 pt-2.5 pb-3 text-sm rounded-t-lg border border-b-0 whitespace-nowrap transition ${
-                active
-                  ? "bg-card text-foreground border-border font-medium"
-                  : "bg-muted/40 text-muted-foreground border-transparent hover:text-foreground hover:bg-muted/60"
-              }`}
-            >
-              {t.icon}
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 共通の大きなカード */}
-      <div className="bg-card border rounded-lg sm:rounded-tl-none shadow-sm">
-        {tab === "profile" && <ProfileTab />}
-        {tab === "security" && <SecurityTab />}
-        {tab === "notifications" && <NotificationsTab />}
-        {tab === "sessions" && <SessionsTab />}
-      </div>
+      <FolderTabs
+        tabs={[
+          { key: "profile", label: "プロフィール", icon: <UserRound className="size-4" />, content: <ProfileTab /> },
+          { key: "security", label: "セキュリティ", icon: <Shield className="size-4" />, content: <SecurityTab /> },
+          { key: "notifications", label: "通知", icon: <Mail className="size-4" />, content: <NotificationsTab /> },
+          { key: "sessions", label: "セッション", icon: <Laptop className="size-4" />, content: <SessionsTab /> },
+        ]}
+      />
     </PageShell>
   );
 }
