@@ -13,6 +13,13 @@ export const ROLE_LABELS: Record<Role, string> = {
 
 export const DEFAULT_ROLE: Role = "master";
 
+// ロールごとの初期画面(ロール切替時にここへリダイレクト)
+export const ROLE_HOME: Record<Role, string> = {
+  master: "/admin/tenants",
+  manager: "/app/dashboard",
+  user: "/app/dashboard",
+};
+
 export function useCurrentRole() {
   const [role, setRoleState] = useState<Role>(DEFAULT_ROLE);
   const [mounted, setMounted] = useState(false);
@@ -29,8 +36,8 @@ export function useCurrentRole() {
     setRoleState(next);
     if (typeof window !== "undefined") {
       window.localStorage.setItem(KEY, next);
-      // ナビ可視性を更新するためにリロードする(モック簡略化)
-      window.location.reload();
+      // 切替時にそのロールのホーム画面へ遷移(モック簡略化)
+      window.location.href = ROLE_HOME[next];
     }
   };
 
