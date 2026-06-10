@@ -4,16 +4,22 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  Bell,
   Briefcase,
   Building2,
+  CircleHelp,
   CreditCard,
+  FileDown,
+  KeyRound,
   LayoutDashboard,
   Plug,
   Receipt,
   ScrollText,
   Settings,
+  Sparkles,
   Table,
   Upload,
+  UserRound,
   Users,
 } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
@@ -31,10 +37,16 @@ const ICONS: Record<string, IconCmp> = {
   Activity,
   ScrollText,
   Plug,
+  KeyRound,
+  Sparkles,
   Settings,
   LayoutDashboard,
   Table,
   Upload,
+  FileDown,
+  Bell,
+  UserRound,
+  CircleHelp,
 };
 
 export function Sidebar({

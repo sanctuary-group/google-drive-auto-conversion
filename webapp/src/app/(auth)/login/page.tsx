@@ -37,6 +37,10 @@ export default function LoginPage() {
         <Button asChild variant="outline" className="w-full">
           <Link href="/admin/tenants">Google でログイン (モック)</Link>
         </Button>
+        <div className="flex justify-between text-xs">
+          <Link href="/forgot-password" className="text-primary underline">パスワードを忘れた</Link>
+          <Link href="/signup" className="text-primary underline">新規登録</Link>
+        </div>
         <div className="border-t pt-4 space-y-2 text-xs text-muted-foreground">
           <div className="font-medium text-foreground">モック用 ショートカット</div>
           <div className="flex flex-wrap gap-2">

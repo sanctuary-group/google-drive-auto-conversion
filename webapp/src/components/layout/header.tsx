@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { RoleSwitcher } from "./role-switcher";
 import { useCurrentRole } from "@/mocks/currentRole";
+import { unreadCount } from "@/mocks/notifications";
 import Link from "next/link";
 
 const ROLE_USER: Record<string, { name: string; email: string }> = {
@@ -22,8 +23,15 @@ export function Header({ title }: { title?: string }) {
       <div className="text-sm font-medium text-muted-foreground">{title}</div>
       <div className="flex items-center gap-3">
         <RoleSwitcher />
-        <Button variant="ghost" size="icon" className="size-8">
-          <Bell className="size-4" />
+        <Button asChild variant="ghost" size="icon" className="size-8 relative">
+          <Link href="/app/notifications" title="通知">
+            <Bell className="size-4" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 size-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-medium inline-flex items-center justify-center">
+                {unreadCount}
+              </span>
+            )}
+          </Link>
         </Button>
         <div className="flex items-center gap-2 pl-3 border-l">
           <Avatar className="size-7">

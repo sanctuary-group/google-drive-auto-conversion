@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 
 import { PageShell } from "@/components/layout/page-shell";
@@ -46,6 +47,7 @@ export default function AdminMembersPage() {
               <TableHead>ロール</TableHead>
               <TableHead>所属テナント</TableHead>
               <TableHead>最終ログイン</TableHead>
+              <TableHead></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -69,6 +71,11 @@ export default function AdminMembersPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">{tenant?.name ?? "—"}</TableCell>
                   <TableCell className="text-muted-foreground text-xs">{m.lastLoginAt}</TableCell>
+                  <TableCell>
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href={`/admin/members/${m.id}`}>詳細</Link>
+                    </Button>
+                  </TableCell>
                 </TableRow>
               );
             })}

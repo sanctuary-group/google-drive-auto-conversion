@@ -21,6 +21,7 @@ export const MASTER_NAV: NavSection[] = [
       { href: "/admin/companies", label: "会社一覧", icon: "Briefcase", roles: ["master"] },
       { href: "/admin/members", label: "管理者", icon: "Users", roles: ["master"] },
       { href: "/admin/billing", label: "プラン・請求", icon: "CreditCard", roles: ["master"] },
+      { href: "/admin/onboarding", label: "新規テナント", icon: "Sparkles", roles: ["master"] },
     ],
   },
   {
@@ -29,6 +30,7 @@ export const MASTER_NAV: NavSection[] = [
       { href: "/admin/system", label: "システム監視", icon: "Activity", roles: ["master"] },
       { href: "/admin/audit-log", label: "監査ログ", icon: "ScrollText", roles: ["master"] },
       { href: "/admin/integrations", label: "API 連携", icon: "Plug", roles: ["master"] },
+      { href: "/admin/api-tokens", label: "API キー", icon: "KeyRound", roles: ["master"] },
       { href: "/admin/settings", label: "テナント設定", icon: "Settings", roles: ["master"] },
     ],
   },
@@ -42,6 +44,15 @@ export const APP_NAV: NavSection[] = [
       { href: "/app/dashboard", label: "ダッシュボード", icon: "LayoutDashboard", roles: ["manager", "user"] },
       { href: "/app/ledger", label: "取引台帳", icon: "Table", roles: ["manager", "user"] },
       { href: "/app/upload", label: "PDF アップロード", icon: "Upload", roles: ["manager", "user"] },
+      { href: "/app/exports", label: "エクスポート", icon: "FileDown", roles: ["manager", "user"] },
+    ],
+  },
+  {
+    title: "アカウント",
+    items: [
+      { href: "/app/notifications", label: "通知", icon: "Bell", roles: ["manager", "user"] },
+      { href: "/app/profile", label: "マイアカウント", icon: "UserRound", roles: ["manager", "user"] },
+      { href: "/app/billing", label: "プラン・利用量", icon: "CreditCard", roles: ["manager"] },
     ],
   },
   {
@@ -49,6 +60,7 @@ export const APP_NAV: NavSection[] = [
     items: [
       { href: "/app/members", label: "メンバー管理", icon: "Users", roles: ["manager"] },
       { href: "/app/settings", label: "設定", icon: "Settings", roles: ["manager"] },
+      { href: "/app/help", label: "ヘルプ", icon: "CircleHelp", roles: ["manager", "user"] },
     ],
   },
 ];
