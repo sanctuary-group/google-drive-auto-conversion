@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, Plus } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/status-badge";
 import { tenants } from "@/mocks/tenants";
-import { companies } from "@/mocks/companies";
-import { members } from "@/mocks/members";
+import { getMembersByTenant } from "@/mocks/members";
+import { getLedgerByTenant } from "@/mocks/ledger";
 
 const PLAN_LABEL = { free: "Free", standard: "Standard", enterprise: "Enterprise" } as const;
+const ROLE_LABEL = { master: "テナント管理者", manager: "マネージャー", user: "ユーザー" } as const;
+
 const USAGE_MONTHLY = [
   { month: "2025/11", count: 142 },
   { month: "2025/12", count: 168 },
@@ -32,15 +37,14 @@ export default async function TenantDetailPage({
   const { id } = await params;
   const tenant = tenants.find((t) => t.id === id);
   if (!tenant) notFound();
-  const tenantCompanies = companies.filter((c) => c.tenantId === tenant.id);
-  const tenantMembers = members.filter((m) => m.tenantId === tenant.id);
-  const masterMembers = tenantMembers.filter((m) => m.role === "master");
-  const totalProcessed = tenantCompanies.reduce((sum, c) => sum + c.monthlyProcessedCount, 0);
+  const tenantMembers = getMembersByTenant(tenant.id);
+  const ledger = getLedgerByTenant(tenant.id);
+  const okCount = ledger.filter((l) => l.status === "OK").length;
 
   return (
     <PageShell
       title={tenant.name}
-      description={`契約: ${tenant.contractDate} / プラン: ${PLAN_LABEL[tenant.plan]}`}
+      description={`プラン: ${PLAN_LABEL[tenant.plan]} / 契約: ${tenant.contractDate}`}
       actions={
         <Button asChild variant="outline">
           <Link href="/admin/tenants">
@@ -53,7 +57,7 @@ export default async function TenantDetailPage({
       <div className="grid gap-4 md:grid-cols-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium">契約状態</CardTitle>
+            <CardTitle className="text-xs text-muted-foreground font-medium">状態</CardTitle>
           </CardHeader>
           <CardContent>
             <StatusBadge variant={tenant.status === "active" ? "ok" : tenant.status === "trial" ? "warn" : "ng"}>
@@ -64,86 +68,120 @@ export default async function TenantDetailPage({
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium">配下の会社</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold tabular-nums">{tenantCompanies.length}</div>
-            <div className="text-xs text-muted-foreground mt-1">社</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
             <CardTitle className="text-xs text-muted-foreground font-medium">今月処理件数</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold tabular-nums">{totalProcessed.toLocaleString()}</div>
+            <div className="text-2xl font-bold tabular-nums">{tenant.monthlyProcessedCount.toLocaleString()}</div>
             <div className="text-xs text-muted-foreground mt-1">件</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs text-muted-foreground font-medium">マスター管理者</CardTitle>
+            <CardTitle className="text-xs text-muted-foreground font-medium">抽出成功率</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold tabular-nums">{masterMembers.length}</div>
-            <div className="text-xs text-muted-foreground mt-1">名</div>
+            <div className="text-2xl font-bold tabular-nums">
+              {ledger.length ? Math.round((okCount / ledger.length) * 100) : 0}%
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              OK {okCount} / {ledger.length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs text-muted-foreground font-medium">メンバー</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold tabular-nums">
+              {tenant.managerCount + tenant.userCount}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              マネージャー {tenant.managerCount} / ユーザー {tenant.userCount}
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="companies">
+      <Tabs defaultValue="members">
         <TabsList>
-          <TabsTrigger value="companies">配下の会社</TabsTrigger>
+          <TabsTrigger value="members">メンバー</TabsTrigger>
+          <TabsTrigger value="settings">設定 / Drive 接続</TabsTrigger>
           <TabsTrigger value="usage">利用量推移</TabsTrigger>
-          <TabsTrigger value="masters">マスター管理者</TabsTrigger>
+          <TabsTrigger value="ledger">最近の処理</TabsTrigger>
           <TabsTrigger value="contract">契約・プラン</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="companies">
+        <TabsContent value="members">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm">会社一覧 ({tenantCompanies.length} 社)</CardTitle>
+              <CardTitle className="text-sm">メンバー ({tenantMembers.length} 名)</CardTitle>
               <Button size="sm">
                 <Plus className="size-4" />
-                会社を追加
+                招待
               </Button>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>会社名</TableHead>
-                    <TableHead>Drive 連携</TableHead>
-                    <TableHead className="text-right">マネージャー</TableHead>
-                    <TableHead className="text-right">ユーザー</TableHead>
-                    <TableHead className="text-right">今月処理</TableHead>
-                    <TableHead></TableHead>
+                    <TableHead>名前</TableHead>
+                    <TableHead>メール</TableHead>
+                    <TableHead>権限</TableHead>
+                    <TableHead>最終ログイン</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tenantCompanies.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.name}</TableCell>
+                  {tenantMembers.map((m) => (
+                    <TableRow key={m.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="size-7">
+                            <AvatarFallback className="text-xs">{m.name.slice(0, 1)}</AvatarFallback>
+                          </Avatar>
+                          {m.name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{m.email}</TableCell>
                       <TableCell>
-                        <StatusBadge variant={c.driveConnected ? "ok" : "muted"}>
-                          {c.driveConnected ? "接続済み" : "未接続"}
+                        <StatusBadge variant={m.role === "master" ? "ok" : m.role === "manager" ? "info" : "muted"}>
+                          {ROLE_LABEL[m.role]}
                         </StatusBadge>
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">{c.managerCount}</TableCell>
-                      <TableCell className="text-right tabular-nums">{c.userCount}</TableCell>
-                      <TableCell className="text-right tabular-nums">{c.monthlyProcessedCount.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={`/admin/companies/${c.id}`}>
-                            詳細
-                            <ExternalLink className="size-3" />
-                          </Link>
-                        </Button>
-                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{m.lastLoginAt}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">テナント設定</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid gap-2">
+                <Label>テナント名</Label>
+                <Input defaultValue={tenant.name} />
+              </div>
+              <div className="border-t pt-4 flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-sm">Google Drive 監視フォルダ連携</div>
+                  <div className="text-xs text-muted-foreground mt-0.5">
+                    フォルダに置かれた PDF/画像を自動で OCR → 台帳に追記
+                  </div>
+                </div>
+                <Switch defaultChecked={tenant.driveConnected} />
+              </div>
+              <div className="border-t pt-4">
+                <div className="font-medium text-sm mb-1">ユーザー視点(自社 = 発行元 / 受領側)</div>
+                <div className="text-xs text-muted-foreground">
+                  現在: <span className="font-medium">{tenant.userRole === "issuer" ? "発行元 (取引先=御中の側)" : "受領側 (取引先=発行元)"}</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -172,37 +210,34 @@ export default async function TenantDetailPage({
           </Card>
         </TabsContent>
 
-        <TabsContent value="masters">
+        <TabsContent value="ledger">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-sm">マスター管理者 ({masterMembers.length} 名)</CardTitle>
-              <Button size="sm">
-                <Plus className="size-4" />
-                招待
-              </Button>
+            <CardHeader>
+              <CardTitle className="text-sm">最近の処理 ({ledger.length} 件)</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>名前</TableHead>
-                    <TableHead>メール</TableHead>
-                    <TableHead>最終ログイン</TableHead>
+                    <TableHead>処理日時</TableHead>
+                    <TableHead>ファイル名</TableHead>
+                    <TableHead>取引先</TableHead>
+                    <TableHead className="text-right">合計</TableHead>
+                    <TableHead>ステータス</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {masterMembers.map((m) => (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Avatar className="size-7">
-                            <AvatarFallback className="text-xs">{m.name.slice(0, 1)}</AvatarFallback>
-                          </Avatar>
-                          {m.name}
-                        </div>
+                  {ledger.slice(0, 8).map((l) => (
+                    <TableRow key={l.id}>
+                      <TableCell className="text-xs text-muted-foreground">{l.processedAt}</TableCell>
+                      <TableCell className="max-w-[280px] truncate">{l.fileName}</TableCell>
+                      <TableCell>{l.vendor}</TableCell>
+                      <TableCell className="text-right tabular-nums">¥{l.total.toLocaleString()}</TableCell>
+                      <TableCell>
+                        <StatusBadge variant={l.status === "OK" ? "ok" : l.status === "部分抽出" ? "warn" : "ng"}>
+                          {l.status}
+                        </StatusBadge>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{m.email}</TableCell>
-                      <TableCell className="text-muted-foreground text-xs">{m.lastLoginAt}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

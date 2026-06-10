@@ -4,7 +4,7 @@ import type { LedgerEntry } from "./types";
 export const ledgerEntries: LedgerEntry[] = [
   {
     id: "L-001",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:43:13",
     fileName: "【株式会社スカイ御中】竹下菜生202603請求書.pdf",
     fileLink: "https://drive.google.com/file/d/11JQJ-PkY3kgj2ZYMoKyCeLj5UtNdbmNA/view",
@@ -22,7 +22,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-002",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:43:24",
     fileName: "202603分 請求書.pdf",
     fileLink: "https://drive.google.com/file/d/1LbNQYcayA_ZWxUSSvKpIxzPL-tqHdiGt/view",
@@ -40,7 +40,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-003",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:43:34",
     fileName: "2026年3月（株）スカイ様宛請求書 - kii (1).pdf",
     fileLink: "https://drive.google.com/file/d/14xRRj8waNw-wJAn0j7vLlE6kBLN60p1I/view",
@@ -58,7 +58,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-004",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:43:43",
     fileName: "20260401-1 - まり.pdf",
     fileLink: "https://drive.google.com/file/d/1jwWQcIft3WwyRv3TBIoKSHRw32ScEFhU/view",
@@ -76,7 +76,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-005",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:43:52",
     fileName: "請求書 - 請求書(バズ抜き用） (8) - あおいるんた.pdf",
     fileLink: "https://drive.google.com/file/d/1uAmhJtwQDFMcWORC-aIRFryHcz-8gV8Y/view",
@@ -94,7 +94,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-006",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:44:12",
     fileName: "(修正版)請求書_菊地亮_株式会社スカイ御中_2026_3月業務分 - 菊地亮.pdf",
     fileLink: "https://drive.google.com/file/d/1ahcfFdnnk-SQQFW_7lHnguNzfahmsC7W/view",
@@ -112,7 +112,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-007",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:44:21",
     fileName: "業務委託契約請求書 2026.4.pdf",
     fileLink: "https://drive.google.com/file/d/1V6GgPcAc3Ma9trC-rj-dd36FaHrrfFWW/view",
@@ -130,7 +130,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-008",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:44:31",
     fileName: "御請求書_株式会社スカイ御中_260415(202604-027).pdf",
     fileLink: "https://drive.google.com/file/d/1QdhVuZpAXHvY8sCx0vSdmZwO-9iYsXND/view",
@@ -148,7 +148,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-009",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:44:40",
     fileName: "20260317_スカイ御中_請求書_永田晶子.pdf",
     fileLink: "https://drive.google.com/file/d/1EyTiG0l9rdZFmXHdh1HeBuH6G-gnYTWc/view",
@@ -166,7 +166,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-010",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:44:49",
     fileName: "20260415-002.pdf",
     fileLink: "https://drive.google.com/file/d/1Y9SW4FvFBFT2GwcbookiIcnDQjsN_Y5b/view",
@@ -184,7 +184,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-011",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:45:06",
     fileName: "2026年2・3月分.pdf",
     fileLink: "https://drive.google.com/file/d/1ilQiCI5_6xmmZBdWcMVpgbYs7skA1eVQ/view",
@@ -202,7 +202,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-012",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:45:15",
     fileName: "DMS及びDMCサポート業務 2026年3月分ご請求書 トレフルE-labo 田村.pdf",
     fileLink: "https://drive.google.com/file/d/14KBOf9l4mHt3DUXe1E3wHOytkhOvqbep/view",
@@ -220,7 +220,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-013",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:45:25",
     fileName: "Six請求書【株式会社SKY御中】(2026年4月清算分).pdf",
     fileLink: "https://drive.google.com/file/d/1VzfF96EKq4jfsnM4rx4tiJ9JRD-PH4MX/view",
@@ -238,7 +238,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-014",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:45:33",
     fileName: "スカイ様 請求書.pdf",
     fileLink: "https://drive.google.com/file/d/12eHCEnR9ZmBb-3pu4LLTr7bjAotFZF7F/view",
@@ -256,7 +256,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-015",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:45:44",
     fileName: "2026.3月請求書.pdf",
     fileLink: "https://drive.google.com/file/d/1SbL5VrOBniNTlEt4Q6mxfIplHfWjDlk_/view",
@@ -274,7 +274,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-016",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:46:25",
     fileName: "2026年3月株式会社スカイ御中御請求書(桐生健志).pdf",
     fileLink: "https://drive.google.com/file/d/12_un_3baqG0UrMaF2UbUa0jUrtVUDfoy/view",
@@ -292,7 +292,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-017",
-    companyId: "company-sky-affiliate",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:46:44",
     fileName: "260401_㈱スカイ様請求書（2026.3月分）.pdf",
     fileLink: "https://drive.google.com/file/d/1Prt5v8kYZsX9oO3AjxkbSA8-EnF7lExa/view",
@@ -310,7 +310,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-018",
-    companyId: "company-sky-affiliate",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:47:07",
     fileName: "株式会社スカイ御中_SNS運用費用_請求書_20260403.pdf",
     fileLink: "https://drive.google.com/file/d/1Oo0C9It4A5dQK61vZbsey4iY_dDXOZDQ/view",
@@ -328,7 +328,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-019",
-    companyId: "company-sky-affiliate",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:47:21",
     fileName: "202603_株式会社スカイ御中_請求書_奥名.pdf",
     fileLink: "https://drive.google.com/file/d/1iG1QykjhlzuqKJThnSRApxXlIszl6ZhM/view",
@@ -346,7 +346,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-020",
-    companyId: "company-sky-affiliate",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:47:34",
     fileName: "株式会社スカイ様-山本.pdf",
     fileLink: "https://drive.google.com/file/d/1zjqNovA84rvbB4OLKuczCsTL2x7Db3nu/view",
@@ -364,7 +364,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-021",
-    companyId: "company-sky-affiliate",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:47:43",
     fileName: "株式会社スカイ様_黒岩.pdf",
     fileLink: "https://drive.google.com/file/d/1fs_6VegbsOZ1yX2AQa3OplVWnwHdMjTJ/view",
@@ -382,7 +382,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-022",
-    companyId: "company-sky-main",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:48:02",
     fileName: "2026.3請求書-株式会社スカイ御中（株式会社Mira）.pdf",
     fileLink: "https://drive.google.com/file/d/1XYZmira/view",
@@ -400,7 +400,7 @@ export const ledgerEntries: LedgerEntry[] = [
   },
   {
     id: "L-023",
-    companyId: "company-sky-affiliate",
+    tenantId: "tenant-sky",
     processedAt: "2026-05-11 16:48:12",
     fileName: "請求書2026.04.01 ㈱スカイ様.pdf",
     fileLink: "https://drive.google.com/file/d/1XYZallright/view",
@@ -418,8 +418,8 @@ export const ledgerEntries: LedgerEntry[] = [
   },
 ];
 
-export function getLedgerByCompany(companyId: string) {
-  return ledgerEntries.filter((e) => e.companyId === companyId);
+export function getLedgerByTenant(tenantId: string) {
+  return ledgerEntries.filter((e) => e.tenantId === tenantId);
 }
 
 export function getLedgerById(id: string) {

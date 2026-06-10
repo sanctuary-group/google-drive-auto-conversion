@@ -18,7 +18,6 @@ export const MASTER_NAV: NavSection[] = [
     title: "マスター管理",
     items: [
       { href: "/admin/tenants", label: "テナント一覧", icon: "Building2", roles: ["master"] },
-      { href: "/admin/companies", label: "会社一覧", icon: "Briefcase", roles: ["master"] },
       { href: "/admin/members", label: "管理者", icon: "Users", roles: ["master"] },
       { href: "/admin/billing", label: "プラン・請求", icon: "CreditCard", roles: ["master"] },
       { href: "/admin/onboarding", label: "新規テナント", icon: "Sparkles", roles: ["master"] },

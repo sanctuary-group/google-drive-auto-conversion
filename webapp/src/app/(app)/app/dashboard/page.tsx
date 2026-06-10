@@ -4,10 +4,10 @@ import { PageShell } from "@/components/layout/page-shell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge, LedgerStatusBadge } from "@/components/status-badge";
-import { getLedgerByCompany } from "@/mocks/ledger";
+import { getLedgerByTenant } from "@/mocks/ledger";
 
 export default function DashboardPage() {
-  const ledger = getLedgerByCompany("company-sky-main");
+  const ledger = getLedgerByTenant("tenant-sky");
   const total = ledger.length;
   const ok = ledger.filter((l) => l.status === "OK").length;
   const partial = ledger.filter((l) => l.status === "部分抽出").length;
@@ -15,7 +15,7 @@ export default function DashboardPage() {
   const recent = [...ledger].sort((a, b) => b.processedAt.localeCompare(a.processedAt)).slice(0, 6);
 
   return (
-    <PageShell title="ダッシュボード" description="株式会社スカイ 本体 / 2026 年 4 月">
+    <PageShell title="ダッシュボード" description="株式会社スカイ / 2026 年 4 月">
       <div className="grid gap-4 md:grid-cols-4 mb-6">
         <KpiCard icon={<FileText className="size-4" />} label="今月処理件数" value={total.toString()} hint="件" />
         <KpiCard

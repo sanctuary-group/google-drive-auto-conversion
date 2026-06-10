@@ -5,26 +5,18 @@ export interface Tenant {
   name: string;
   plan: "free" | "standard" | "enterprise";
   contractDate: string;
-  monthlyProcessedCount: number;
-  companyCount: number;
   status: "active" | "trial" | "suspended";
-}
-
-export interface Company {
-  id: string;
-  tenantId: string;
-  name: string;
+  // 旧 Company 由来の属性(統合)
   driveConnected: boolean;
+  userRole: "issuer" | "receiver";
   monthlyProcessedCount: number;
   managerCount: number;
   userCount: number;
-  userRole: "issuer" | "receiver";
 }
 
 export interface Member {
   id: string;
   tenantId?: string;
-  companyId?: string;
   name: string;
   email: string;
   role: Role;
@@ -37,7 +29,7 @@ export type LedgerStatus = "OK" | "部分抽出" | "NG";
 
 export interface LedgerEntry {
   id: string;
-  companyId: string;
+  tenantId: string;
   processedAt: string;
   fileName: string;
   fileLink: string;

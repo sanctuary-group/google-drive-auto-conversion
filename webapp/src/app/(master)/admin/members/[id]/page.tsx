@@ -11,7 +11,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StatusBadge } from "@/components/status-badge";
 import { members } from "@/mocks/members";
 import { tenants } from "@/mocks/tenants";
-import { companies } from "@/mocks/companies";
 import { auditLog } from "@/mocks/auditLog";
 
 const ROLE_LABEL = { master: "マスター管理", manager: "マネージャー", user: "ユーザー" } as const;
@@ -25,7 +24,6 @@ export default async function MemberDetailPage({
   const m = members.find((x) => x.id === id);
   if (!m) notFound();
   const tenant = m.tenantId ? tenants.find((t) => t.id === m.tenantId) : null;
-  const company = m.companyId ? companies.find((c) => c.id === m.companyId) : null;
   const ownActions = auditLog.filter((a) => a.actor === m.name);
 
   return (
@@ -62,19 +60,12 @@ export default async function MemberDetailPage({
               <CardTitle className="text-xs text-muted-foreground font-medium">所属</CardTitle>
             </CardHeader>
             <CardContent className="text-sm space-y-1.5">
-              {tenant && (
+              {tenant ? (
                 <div>
                   <div className="text-xs text-muted-foreground">テナント</div>
                   <Link href={`/admin/tenants/${tenant.id}`} className="hover:underline">{tenant.name}</Link>
                 </div>
-              )}
-              {company && (
-                <div>
-                  <div className="text-xs text-muted-foreground">会社</div>
-                  <Link href={`/admin/companies/${company.id}`} className="hover:underline">{company.name}</Link>
-                </div>
-              )}
-              {!tenant && !company && (
+              ) : (
                 <div className="text-muted-foreground">マスター管理者(全テナント)</div>
               )}
             </CardContent>

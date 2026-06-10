@@ -6,16 +6,16 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { StatusBadge } from "@/components/status-badge";
-import { getMembersByCompany } from "@/mocks/members";
+import { getMembersByTenant } from "@/mocks/members";
 
-const COMPANY_ID = "company-sky-main";
+const TENANT_ID = "tenant-sky";
 
 export default function AppMembersPage() {
-  const members = getMembersByCompany(COMPANY_ID);
+  const members = getMembersByTenant(TENANT_ID).filter((m) => m.role !== "master");
   return (
     <PageShell
       title="メンバー管理"
-      description="株式会社スカイ 本体 のマネージャー・ユーザー"
+      description="株式会社スカイ のマネージャー・ユーザー"
       actions={
         <Button>
           <Plus className="size-4" />

@@ -15,11 +15,13 @@ export default function TenantsPage() {
   return (
     <PageShell
       title="テナント一覧"
-      description="顧客テナントを横断管理します"
+      description="契約中のテナント(顧客企業)を管理します"
       actions={
-        <Button>
-          <Plus className="size-4" />
-          新規テナント
+        <Button asChild>
+          <Link href="/admin/onboarding">
+            <Plus className="size-4" />
+            新規テナント
+          </Link>
         </Button>
       }
     >
@@ -35,10 +37,11 @@ export default function TenantsPage() {
             <TableRow>
               <TableHead>テナント名</TableHead>
               <TableHead>プラン</TableHead>
-              <TableHead>契約日</TableHead>
-              <TableHead className="text-right">会社数</TableHead>
-              <TableHead className="text-right">今月処理</TableHead>
               <TableHead>状態</TableHead>
+              <TableHead>Drive 連携</TableHead>
+              <TableHead className="text-right">マネージャー</TableHead>
+              <TableHead className="text-right">ユーザー</TableHead>
+              <TableHead className="text-right">今月処理</TableHead>
               <TableHead></TableHead>
             </TableRow>
           </TableHeader>
@@ -51,14 +54,19 @@ export default function TenantsPage() {
                     {PLAN_LABEL[t.plan]}
                   </StatusBadge>
                 </TableCell>
-                <TableCell className="text-muted-foreground">{t.contractDate}</TableCell>
-                <TableCell className="text-right tabular-nums">{t.companyCount}</TableCell>
-                <TableCell className="text-right tabular-nums">{t.monthlyProcessedCount.toLocaleString()}</TableCell>
                 <TableCell>
                   <StatusBadge variant={t.status === "active" ? "ok" : t.status === "trial" ? "warn" : "ng"}>
                     {t.status === "active" ? "稼働中" : t.status === "trial" ? "トライアル" : "停止"}
                   </StatusBadge>
                 </TableCell>
+                <TableCell>
+                  <StatusBadge variant={t.driveConnected ? "ok" : "muted"}>
+                    {t.driveConnected ? "接続済み" : "未接続"}
+                  </StatusBadge>
+                </TableCell>
+                <TableCell className="text-right tabular-nums">{t.managerCount}</TableCell>
+                <TableCell className="text-right tabular-nums">{t.userCount}</TableCell>
+                <TableCell className="text-right tabular-nums">{t.monthlyProcessedCount.toLocaleString()}</TableCell>
                 <TableCell>
                   <Button asChild variant="ghost" size="sm">
                     <Link href={`/admin/tenants/${t.id}`}>詳細</Link>
