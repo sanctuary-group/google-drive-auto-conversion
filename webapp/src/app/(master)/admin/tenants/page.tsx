@@ -61,7 +61,7 @@ export default function TenantsPage() {
                 </TableCell>
                 <TableCell>
                   <Button asChild variant="ghost" size="sm">
-                    <Link href="/admin/companies">詳細</Link>
+                    <Link href={`/admin/tenants/${t.id}`}>詳細</Link>
                   </Button>
                 </TableCell>
               </TableRow>

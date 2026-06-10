@@ -8,11 +8,13 @@ import {
   Building2,
   CreditCard,
   LayoutDashboard,
+  Plug,
+  Receipt,
+  ScrollText,
   Settings,
   Table,
   Upload,
   Users,
-  Receipt,
 } from "lucide-react";
 import type { ComponentType, SVGProps } from "react";
 
@@ -27,6 +29,8 @@ const ICONS: Record<string, IconCmp> = {
   Users,
   CreditCard,
   Activity,
+  ScrollText,
+  Plug,
   Settings,
   LayoutDashboard,
   Table,

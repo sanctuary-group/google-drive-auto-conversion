@@ -27,6 +27,8 @@ export const MASTER_NAV: NavSection[] = [
     title: "運営",
     items: [
       { href: "/admin/system", label: "システム監視", icon: "Activity", roles: ["master"] },
+      { href: "/admin/audit-log", label: "監査ログ", icon: "ScrollText", roles: ["master"] },
+      { href: "/admin/integrations", label: "API 連携", icon: "Plug", roles: ["master"] },
       { href: "/admin/settings", label: "テナント設定", icon: "Settings", roles: ["master"] },
     ],
   },
