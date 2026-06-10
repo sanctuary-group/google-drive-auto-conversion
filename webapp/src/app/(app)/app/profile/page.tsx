@@ -7,7 +7,6 @@ import {
   FileText,
   Globe,
   KeyRound,
-  Laptop,
   Mail,
   MessageSquare,
   Shield,
@@ -43,7 +42,6 @@ export default function ProfilePage() {
           { key: "profile", label: "プロフィール", icon: <UserRound className="size-4" />, content: <ProfileTab /> },
           { key: "security", label: "セキュリティ", icon: <Shield className="size-4" />, content: <SecurityTab /> },
           { key: "notifications", label: "通知", icon: <Mail className="size-4" />, content: <NotificationsTab /> },
-          { key: "sessions", label: "セッション", icon: <Laptop className="size-4" />, content: <SessionsTab /> },
         ]}
       />
     </PageShell>
@@ -232,27 +230,6 @@ function NotificationsTab() {
   );
 }
 
-/* ────────────────── セッション ────────────────── */
-function SessionsTab() {
-  return (
-    <div>
-      <div className="p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <SectionTitle>アクティブなセッション</SectionTitle>
-          <div className="text-xs text-muted-foreground mt-1">現在ログイン中のすべての端末</div>
-        </div>
-        <Button variant="destructive" size="sm" className="w-full sm:w-auto">他端末からすべてログアウト</Button>
-      </div>
-      <Separator />
-      <div className="p-4 sm:p-6 grid gap-3 md:grid-cols-2">
-        <SessionCard device="MacBook Pro" browser="Chrome 130" os="macOS 15.2" loc="東京, JP" ip="203.0.113.42" lastActive="アクティブ" icon="laptop" current />
-        <SessionCard device="iPhone 15" browser="Safari" os="iOS 18.2" loc="東京, JP" ip="203.0.113.42" lastActive="2 時間前" icon="phone" />
-        <SessionCard device="Windows Desktop" browser="Edge 129" os="Windows 11" loc="大阪, JP" ip="198.51.100.7" lastActive="7 日前" icon="laptop" stale />
-      </div>
-    </div>
-  );
-}
-
 /* ────────────────── 部品 ────────────────── */
 function SectionTitle({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -349,29 +326,3 @@ function NotifRow({
   );
 }
 
-function SessionCard({
-  device, browser, os, loc, ip, lastActive, icon, current, stale,
-}: {
-  device: string; browser: string; os: string; loc: string; ip: string; lastActive: string;
-  icon: "laptop" | "phone"; current?: boolean; stale?: boolean;
-}) {
-  return (
-    <div className={`flex items-center justify-between gap-2 sm:gap-3 rounded-lg border p-3 sm:p-4 transition ${current ? "border-primary/30 bg-primary/5" : ""}`}>
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        <div className={`size-10 rounded-lg flex items-center justify-center shrink-0 ${current ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"}`}>
-          {icon === "laptop" ? <Laptop className="size-5" /> : <Smartphone className="size-5" />}
-        </div>
-        <div className="min-w-0 space-y-0.5 flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium truncate">{device}</span>
-            {current && <StatusBadge variant="ok">このセッション</StatusBadge>}
-            {stale && <StatusBadge variant="muted">非アクティブ</StatusBadge>}
-          </div>
-          <div className="text-xs text-muted-foreground truncate">{browser} · {os}</div>
-          <div className="text-[11px] text-muted-foreground font-mono truncate">{loc} · {ip} · {lastActive}</div>
-        </div>
-      </div>
-      {!current && <Button variant="ghost" size="sm" className="shrink-0">ログアウト</Button>}
-    </div>
-  );
-}
